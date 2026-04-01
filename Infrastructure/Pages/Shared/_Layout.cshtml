@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Infrastructure Monitor</title>
+
+    <environment include="Development">
+        <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.css" />
+    </environment>
+    <environment exclude="Development">
+        <link rel="stylesheet"
+              href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+              asp-fallback-href="~/lib/bootstrap/dist/css/bootstrap.min.css"
+              asp-fallback-test-class="sr-only"
+              asp-fallback-test-property="position"
+              asp-fallback-test-value="absolute"
+              integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+              crossorigin="anonymous" />
+    </environment>
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom shadow-sm">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" href="/">
+                    <span class="me-2">&#9642;</span>Infrastructure Monitor
+                </a>
+                <span class="navbar-text text-light small" id="last-updated">Waiting for data&hellip;</span>
+            </div>
+        </nav>
+    </header>
+
+    <main role="main" class="container-fluid py-4">
+        @RenderBody()
+    </main>
+
+    <footer class="border-top py-3 mt-auto">
+        <div class="container-fluid">
+            <small class="text-muted">crgolden Infrastructure Monitor &mdash; real-time service health</small>
+        </div>
+    </footer>
+
+    <environment include="Development">
+        <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.js"></script>
+    </environment>
+    <environment exclude="Development">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+                asp-fallback-src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"
+                asp-fallback-test="window.bootstrap"
+                integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+                crossorigin="anonymous">
+        </script>
+    </environment>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"
+            crossorigin="anonymous"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

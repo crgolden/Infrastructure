@@ -1,0 +1,31 @@
+/* Infrastructure Monitor — custom styles */
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 60px;
+    background-color: #f8f9fa;
+}
+
+/* Service card status border pulse on unhealthy */
+.card.border-danger {
+    animation: pulse-danger 2s ease-in-out infinite;
+}
+
+@keyframes pulse-danger {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+    50%       { box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+}
+
+/* Alert log scroll */
+#alert-log {
+    font-size: 0.82rem;
+}
+
+/* Navbar brand icon */
+.navbar-brand span {
+    color: #0dcaf0;
+}

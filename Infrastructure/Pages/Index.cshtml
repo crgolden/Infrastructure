@@ -1,0 +1,157 @@
+@page
+@model Infrastructure.Pages.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0">Service Health Dashboard</h1>
+    <span id="connection-badge" class="badge bg-secondary">Connecting&hellip;</span>
+</div>
+
+<div id="service-grid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4 mb-5">
+    <div class="col text-center py-5 text-muted" id="loading-placeholder">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+        Loading service status&hellip;
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-semibold">Alert Log</span>
+        <button class="btn btn-sm btn-outline-secondary" id="clear-log-btn">Clear</button>
+    </div>
+    <ul class="list-group list-group-flush" id="alert-log" style="max-height:320px;overflow-y:auto;">
+        <li class="list-group-item text-muted small">No events yet.</li>
+    </ul>
+</div>
+
+@section Scripts {
+<script>
+(function () {
+    const grid = document.getElementById('service-grid');
+    const alertLog = document.getElementById('alert-log');
+    const connectionBadge = document.getElementById('connection-badge');
+    const lastUpdated = document.getElementById('last-updated');
+    const clearBtn = document.getElementById('clear-log-btn');
+    const MAX_LOG_ENTRIES = 50;
+
+    clearBtn.addEventListener('click', () => {
+        alertLog.innerHTML = '<li class="list-group-item text-muted small">Log cleared.</li>';
+    });
+
+    const statusClass = {
+        'Healthy': { card: 'border-success', badge: 'bg-success', text: 'Healthy' },
+        'Degraded': { card: 'border-warning', badge: 'bg-warning text-dark', text: 'Degraded' },
+        'Unhealthy': { card: 'border-danger', badge: 'bg-danger', text: 'Unhealthy' },
+        'Unknown': { card: 'border-secondary', badge: 'bg-secondary', text: 'Unknown' },
+    };
+
+    function cardId(name) {
+        return 'svc-' + name.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    }
+
+    function formatTime(iso) {
+        return new Date(iso).toLocaleTimeString();
+    }
+
+    function renderCard(result) {
+        const s = statusClass[result.status] || statusClass['Unknown'];
+        const id = cardId(result.name);
+        let card = document.getElementById(id);
+        if (!card) {
+            const col = document.createElement('div');
+            col.className = 'col';
+            col.innerHTML = `
+                <div class="card h-100 border-2 ${s.card}" id="${id}">
+                    <div class="card-header fw-semibold text-truncate">${result.name}</div>
+                    <div class="card-body d-flex flex-column align-items-center justify-content-center py-4">
+                        <span class="badge fs-6 px-4 py-2 svc-badge ${s.badge}">${s.text}</span>
+                        <p class="text-muted small mt-2 mb-0 svc-desc">${result.description || ''}</p>
+                    </div>
+                    <div class="card-footer text-muted small svc-time">Checked: ${formatTime(result.checkedAt)}</div>
+                </div>`;
+            grid.appendChild(col);
+        } else {
+            card.className = `card h-100 border-2 ${s.card}`;
+            card.querySelector('.svc-badge').className = `badge fs-6 px-4 py-2 svc-badge ${s.badge}`;
+            card.querySelector('.svc-badge').textContent = s.text;
+            card.querySelector('.svc-desc').textContent = result.description || '';
+            card.querySelector('.svc-time').textContent = `Checked: ${formatTime(result.checkedAt)}`;
+        }
+    }
+
+    function appendLog(message, level) {
+        const placeholder = alertLog.querySelector('.text-muted');
+        if (placeholder && placeholder.textContent.includes('No events yet')) {
+            alertLog.removeChild(placeholder);
+        }
+        const li = document.createElement('li');
+        li.className = `list-group-item list-group-item-${level} small`;
+        li.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        alertLog.insertBefore(li, alertLog.firstChild);
+        while (alertLog.children.length > MAX_LOG_ENTRIES) {
+            alertLog.removeChild(alertLog.lastChild);
+        }
+    }
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl('/hubs/health')
+        .withAutomaticReconnect()
+        .build();
+
+    const previousStatuses = {};
+
+    connection.on('ReceiveSnapshot', (snapshot) => {
+        const placeholder = document.getElementById('loading-placeholder');
+        if (placeholder) placeholder.remove();
+
+        lastUpdated.textContent = `Last updated: ${formatTime(snapshot.timestamp)}`;
+
+        snapshot.results.forEach(result => {
+            const prev = previousStatuses[result.name];
+            renderCard(result);
+
+            if (prev !== undefined && prev !== result.status) {
+                if (result.status === 'Unhealthy') {
+                    appendLog(`${result.name} → ${result.status}${result.description ? ': ' + result.description : ''}`, 'danger');
+                } else if (result.status === 'Healthy' && prev === 'Unhealthy') {
+                    appendLog(`${result.name} recovered → ${result.status}`, 'success');
+                } else if (result.status === 'Degraded') {
+                    appendLog(`${result.name} → ${result.status}`, 'warning');
+                }
+            }
+            previousStatuses[result.name] = result.status;
+        });
+    });
+
+    connection.onreconnecting(() => {
+        connectionBadge.className = 'badge bg-warning text-dark';
+        connectionBadge.textContent = 'Reconnecting…';
+    });
+
+    connection.onreconnected(() => {
+        connectionBadge.className = 'badge bg-success';
+        connectionBadge.textContent = 'Connected';
+        appendLog('SignalR reconnected', 'info');
+    });
+
+    connection.onclose(() => {
+        connectionBadge.className = 'badge bg-danger';
+        connectionBadge.textContent = 'Disconnected';
+        appendLog('SignalR connection lost', 'warning');
+    });
+
+    connection.start()
+        .then(() => {
+            connectionBadge.className = 'badge bg-success';
+            connectionBadge.textContent = 'Connected';
+        })
+        .catch(err => {
+            connectionBadge.className = 'badge bg-danger';
+            connectionBadge.textContent = 'Error';
+            console.error('SignalR connection error:', err);
+        });
+}());
+</script>
+}

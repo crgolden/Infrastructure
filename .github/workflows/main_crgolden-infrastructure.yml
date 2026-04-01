@@ -1,0 +1,158 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy ASP.Net Core app to Azure Web App - crgolden-infrastructure
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    name: Build and analyze
+    runs-on: windows-latest
+    permissions:
+      id-token: write #This is required for requesting the JWT (needed for Azure OIDC)
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          java-version: 17
+          distribution: 'zulu'
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Cache SonarQube Cloud packages
+        uses: actions/cache@v5
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Cache SonarQube Cloud scanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v5
+        with:
+          path: ${{ runner.temp }}\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+
+      - name: Install SonarQube Cloud scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          New-Item -Path ${{ runner.temp }}\scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}\scanner
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache dotnet global tools
+        uses: actions/cache@v5
+        with:
+          path: ~/.dotnet/tools
+          key: ${{ runner.os }}-dotnet-tools-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-dotnet-tools-
+
+      - name: Install dotnet-coverage
+        run: dotnet tool install --global dotnet-coverage
+
+      - name: Begin Sonar analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+        shell: powershell
+        run: |
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner begin `
+            /k:"$env:SONAR_PROJECT_KEY" `
+            /o:"$env:SONAR_ORGANIZATION" `
+            /d:sonar.token="$env:SONAR_TOKEN" `
+            /d:sonar.host.url="https://sonarcloud.io" `
+            /d:sonar.cs.vscoveragexml.reportsPaths="coverage.xml" `
+            /d:sonar.scanner.skipJreProvisioning=true
+
+      - name: Build with dotnet
+        run: dotnet build --no-incremental --configuration Release
+
+      - name: Run unit tests with coverage
+        run: |
+          dotnet-coverage collect `
+            "dotnet test --project Infrastructure.Tests --no-build --configuration Release -- --filter-trait Category=Unit --report-xunit-trx --report-xunit-trx-filename unit-tests.trx" `
+            -f xml -o "coverage.xml" -s "coverage.settings.xml"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results
+          path: Infrastructure.Tests/bin/Release/net10.0/TestResults/
+
+      - name: dotnet publish
+        run: >
+          dotnet publish Infrastructure/Infrastructure.csproj
+          -c Release
+          -r win-x86
+          --self-contained false
+          -o ${{ github.workspace }}\publish
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v7
+        with:
+          name: .net-app
+          path: ${{ github.workspace }}\publish
+
+      - name: End Sonar analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          ${{ runner.temp }}\scanner\dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v7
+        with:
+          name: .net-app
+
+      - name: Login to Azure
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5  # v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@84a80cfe7e9889f35148ed88c307e6e93bf02578  # v3
+        with:
+          app-name: 'crgolden-infrastructure'
+          slot-name: 'Production'
+          package: .
