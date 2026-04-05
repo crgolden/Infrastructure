@@ -2,6 +2,7 @@ namespace Infrastructure.Extensions;
 
 using System.Data;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
 using Azure.Core;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
@@ -39,7 +40,9 @@ public static class HostApplicationBuilderExtensions
                 secretClient.GetSecretAsync("RedisPassword", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("MongoDbUsername", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("MongoDbPassword", cancellationToken: cancellationToken),
-                secretClient.GetSecretAsync("MonitoringRecipientEmail", cancellationToken: cancellationToken)
+                secretClient.GetSecretAsync("MonitoringRecipientEmail", cancellationToken: cancellationToken),
+                secretClient.GetSecretAsync("ElasticsearchUsername", cancellationToken: cancellationToken),
+                secretClient.GetSecretAsync("ElasticsearchPassword", cancellationToken: cancellationToken)
             };
             var results = await Task.WhenAll(tasks);
             var resendApiKey = results[0].Value.Value;
@@ -59,6 +62,8 @@ public static class HostApplicationBuilderExtensions
             var redisPassword = results[3].Value.Value;
             var mongoUsername = results[4].Value.Value;
             var mongoPassword = results[5].Value.Value;
+            var elasticsearchUsername = results[7].Value.Value;
+            var elasticsearchPassword = results[8].Value.Value;
 
             // Options
             builder.Services.Configure<MonitoringOptions>(builder.Configuration.GetSection(nameof(MonitoringOptions)));
@@ -77,8 +82,16 @@ public static class HostApplicationBuilderExtensions
             // Typed HttpClients for health checks
             builder.Services.AddHttpClient<IisHttpHealthCheck>();
             builder.Services.AddHttpClient<IisHttpsHealthCheck>();
-            builder.Services.AddHttpClient<ElasticsearchHealthCheck>();
-            builder.Services.AddHttpClient<KibanaHealthCheck>();
+            builder.Services.AddHttpClient<ElasticsearchHealthCheck>(httpClient =>
+            {
+                var credentials = System.Convert.ToBase64String(UTF8.GetBytes($"{elasticsearchUsername}:{elasticsearchPassword}"));
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+            });
+            builder.Services.AddHttpClient<KibanaHealthCheck>(httpClient =>
+            {
+                var credentials = System.Convert.ToBase64String(UTF8.GetBytes($"{elasticsearchUsername}:{elasticsearchPassword}"));
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+            });
             builder.Services.AddHttpClient<PlexHealthCheck>();
 
             // SQL Server connection factory
