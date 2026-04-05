@@ -1,13 +1,13 @@
 namespace Infrastructure.HealthChecks;
 
-using Microsoft.Data.SqlClient;
+using System.Data;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 public sealed class SqlServerHealthCheck : IHealthCheck
 {
-    private readonly Func<SqlConnection> _connectionFactory;
+    private readonly Func<IDbConnection> _connectionFactory;
 
-    public SqlServerHealthCheck(Func<SqlConnection> connectionFactory)
+    public SqlServerHealthCheck(Func<IDbConnection> connectionFactory)
     {
         _connectionFactory = connectionFactory;
     }
@@ -16,11 +16,11 @@ public sealed class SqlServerHealthCheck : IHealthCheck
     {
         try
         {
-            await using var connection = _connectionFactory();
-            await connection.OpenAsync(cancellationToken);
-            await using var command = connection.CreateCommand();
+            using var connection = _connectionFactory();
+            connection.Open();
+            using var command = connection.CreateCommand();
             command.CommandText = "SELECT 1";
-            await command.ExecuteScalarAsync(cancellationToken);
+            command.ExecuteScalar();
             return HealthCheckResult.Healthy("Connected");
         }
         catch (Exception ex)
