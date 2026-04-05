@@ -3,7 +3,6 @@ namespace Infrastructure.Tests.HealthChecks;
 using Infrastructure.HealthChecks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Moq;
 
 [Trait("Category", "Unit")]
 public sealed class SqlServerHealthCheckTests

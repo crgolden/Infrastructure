@@ -1,21 +1,41 @@
 namespace Infrastructure.Services;
 
-using Infrastructure.Hubs;
-using Infrastructure.Models;
+using Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Models;
 
-public sealed class HealthMonitorService(
-    HealthCheckService healthCheckService,
-    IHubContext<HealthHub> hubContext,
-    IAlertService alertService,
-    IOptions<MonitoringOptions> options,
-    ILogger<HealthMonitorService> logger) : BackgroundService, IHealthMonitorService
+public sealed class HealthMonitorService : BackgroundService, IHealthMonitorService
 {
-    private HealthSnapshot? _lastSnapshot;
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
+    private readonly HealthCheckService _healthCheckService;
+    private readonly IHubContext<HealthHub> _hubContext;
+    private readonly IAlertService _alertService;
+    private readonly int _intervalSeconds;
+    private readonly ILogger<HealthMonitorService> _logger;
+
+    private HealthSnapshot? _lastSnapshot;
+
+    public HealthMonitorService(
+        HealthCheckService healthCheckService,
+        IHubContext<HealthHub> hubContext,
+        IAlertService alertService,
+        IOptions<MonitoringOptions> options,
+        ILogger<HealthMonitorService> logger)
+    {
+        _healthCheckService = healthCheckService;
+        _hubContext = hubContext;
+        _alertService = alertService;
+        if (!options.Value.IntervalSeconds.HasValue)
+        {
+            throw new InvalidOperationException($"Invalid '{nameof(MonitoringOptions.IntervalSeconds)}'.");
+        }
+
+        _intervalSeconds = options.Value.IntervalSeconds.Value;
+        _logger = logger;
+    }
 
     public HealthSnapshot? LastSnapshot
     {
@@ -30,17 +50,25 @@ public sealed class HealthMonitorService(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        logger.LogInformation("Health monitor started. Polling every {Seconds}s.", options.Value.IntervalSeconds);
+        _logger.LogInformation("Health monitor started. Polling every {Seconds}s.", _intervalSeconds);
         while (!stoppingToken.IsCancellationRequested)
         {
             await PollAsync(stoppingToken);
-            await Task.Delay(TimeSpan.FromSeconds(options.Value.IntervalSeconds), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(_intervalSeconds), stoppingToken);
         }
     }
 
+    private static ServiceStatus MapStatus(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy => ServiceStatus.Healthy,
+        HealthStatus.Degraded => ServiceStatus.Degraded,
+        HealthStatus.Unhealthy => ServiceStatus.Unhealthy,
+        _ => ServiceStatus.Unknown,
+    };
+
     private async Task PollAsync(CancellationToken cancellationToken)
     {
-        var report = await healthCheckService.CheckHealthAsync(cancellationToken);
+        var report = await _healthCheckService.CheckHealthAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var results = report.Entries.Select(entry => new ServiceHealthResult(
             Name: entry.Key,
@@ -55,33 +83,26 @@ public sealed class HealthMonitorService(
             _lastSnapshot = snapshot;
         }
 
-        await hubContext.Clients.All.SendAsync("ReceiveSnapshot", snapshot, cancellationToken);
+        await _hubContext.Clients.All.SendAsync("ReceiveSnapshot", snapshot, cancellationToken);
 
         foreach (var result in results)
         {
             _previousStatuses.TryGetValue(result.Name, out var previous);
             var current = result.Status;
 
-            if (previous == ServiceStatus.Healthy && current == ServiceStatus.Unhealthy)
+            switch (previous)
             {
-                logger.LogWarning("Service {Name} transitioned to Unhealthy: {Description}", result.Name, result.Description);
-                await alertService.SendAlertAsync(result, cancellationToken);
-            }
-            else if (previous == ServiceStatus.Unhealthy && current == ServiceStatus.Healthy)
-            {
-                logger.LogInformation("Service {Name} recovered to Healthy.", result.Name);
-                await alertService.SendRecoveryAsync(result, cancellationToken);
+                case ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
+                    _logger.LogWarning("Service {Name} transitioned to Unhealthy: {Description}", result.Name, result.Description);
+                    await _alertService.SendAlertAsync(result, cancellationToken);
+                    break;
+                case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
+                    _logger.LogInformation("Service {Name} recovered to Healthy.", result.Name);
+                    await _alertService.SendRecoveryAsync(result, cancellationToken);
+                    break;
             }
 
             _previousStatuses[result.Name] = current;
         }
     }
-
-    private static ServiceStatus MapStatus(HealthStatus status) => status switch
-    {
-        HealthStatus.Healthy => ServiceStatus.Healthy,
-        HealthStatus.Degraded => ServiceStatus.Degraded,
-        HealthStatus.Unhealthy => ServiceStatus.Unhealthy,
-        _ => ServiceStatus.Unknown,
-    };
 }

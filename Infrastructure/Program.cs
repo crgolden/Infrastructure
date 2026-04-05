@@ -34,7 +34,7 @@ try
     }
 
     app.UseHttpsRedirection();
-    app.MapHealthChecks("/health").DisableHttpMetrics();
+    app.MapHealthChecks("/Health").DisableHttpMetrics();
     app.MapStaticAssets();
     app.MapControllers();
     app.MapRazorPages();

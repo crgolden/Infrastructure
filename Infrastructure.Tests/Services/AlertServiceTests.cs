@@ -1,8 +1,8 @@
 namespace Infrastructure.Tests.Services;
 
-using Infrastructure.Models;
 using Infrastructure.Services;
 using Microsoft.Extensions.Options;
+using Models;
 using Moq;
 using Resend;
 

@@ -2,15 +2,14 @@ namespace Infrastructure.Tests.HealthChecks;
 
 using System.Net.Sockets;
 using Infrastructure.HealthChecks;
-using Infrastructure.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Moq;
+using Models;
 
 [Trait("Category", "Unit")]
 public sealed class YawcamHealthCheckTests
 {
-    private static IOptions<ServiceEndpointOptions> DefaultOptions => Options.Create(new ServiceEndpointOptions());
+    private static IOptions<ServiceEndpointOptions> DefaultOptions => Options.Create(new ServiceEndpointOptions { YawcamHost = "127.0.0.1", YawcamPort = 5995 });
 
     [Fact]
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()

@@ -1,16 +1,29 @@
 namespace Infrastructure.Services;
 
-using Infrastructure.Models;
 using Microsoft.Extensions.Options;
+using Models;
 using Resend;
 
-public sealed class AlertService(IResend resend, IOptions<AlertOptions> options) : IAlertService
+public sealed class AlertService : IAlertService
 {
     private const string From = "noreply@crgolden.com";
 
-    public async Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
+    private readonly IResend _resend;
+    private readonly string _to;
+
+    public AlertService(IResend resend, IOptions<AlertOptions> options)
     {
-        var recipientEmail = options.Value.RecipientEmail!;
+        _resend = resend;
+        if (IsNullOrWhiteSpace(options.Value.RecipientEmail))
+        {
+            throw new InvalidOperationException("Invalid 'RecipientEmail'.");
+        }
+
+        _to = options.Value.RecipientEmail;
+    }
+
+    public Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
+    {
         var message = new EmailMessage
         {
             From = From,
@@ -23,13 +36,12 @@ public sealed class AlertService(IResend resend, IOptions<AlertOptions> options)
                 <p><strong>Detected at:</strong> {result.CheckedAt:O}</p>
                 """,
         };
-        message.To.Add(recipientEmail);
-        await resend.EmailSendAsync(message, cancellationToken);
+        message.To.Add(_to);
+        return _resend.EmailSendAsync(message, cancellationToken);
     }
 
-    public async Task SendRecoveryAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
+    public Task SendRecoveryAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
     {
-        var recipientEmail = options.Value.RecipientEmail!;
         var message = new EmailMessage
         {
             From = From,
@@ -42,7 +54,7 @@ public sealed class AlertService(IResend resend, IOptions<AlertOptions> options)
                 <p><strong>Recovered at:</strong> {result.CheckedAt:O}</p>
                 """,
         };
-        message.To.Add(recipientEmail);
-        await resend.EmailSendAsync(message, cancellationToken);
+        message.To.Add(_to);
+        return _resend.EmailSendAsync(message, cancellationToken);
     }
 }

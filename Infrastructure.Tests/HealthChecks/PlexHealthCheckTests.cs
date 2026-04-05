@@ -2,9 +2,9 @@ namespace Infrastructure.Tests.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
-using Infrastructure.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Models;
 using Moq;
 using Moq.Protected;
 
@@ -14,7 +14,7 @@ public sealed class PlexHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccess_ReturnsHealthy()
     {
-        var check = new PlexHealthCheck(BuildFactory(HttpStatusCode.OK), GetDefaultOptions());
+        var check = new PlexHealthCheck(BuildClient(HttpStatusCode.OK), GetDefaultOptions());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Plex", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
@@ -25,7 +25,7 @@ public sealed class PlexHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
-        var check = new PlexHealthCheck(BuildFactory(HttpStatusCode.InternalServerError), GetDefaultOptions());
+        var check = new PlexHealthCheck(BuildClient(HttpStatusCode.InternalServerError), GetDefaultOptions());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Plex", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
@@ -36,7 +36,7 @@ public sealed class PlexHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new PlexHealthCheck(BuildThrowingFactory(new HttpRequestException("timeout")), GetDefaultOptions());
+        var check = new PlexHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultOptions());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Plex", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
@@ -45,29 +45,23 @@ public sealed class PlexHealthCheckTests
         Assert.Equal("timeout", result.Description);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions());
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Plex = new Uri("http://localhost:32400") });
 
-    private static IHttpClientFactory BuildFactory(HttpStatusCode statusCode)
+    private static HttpClient BuildClient(HttpStatusCode statusCode)
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(statusCode));
-        var client = new HttpClient(handler.Object);
-        var factory = new Mock<IHttpClientFactory>();
-        factory.Setup(f => f.CreateClient("HealthCheck")).Returns(client);
-        return factory.Object;
+        return new HttpClient(handler.Object);
     }
 
-    private static IHttpClientFactory BuildThrowingFactory(Exception ex)
+    private static HttpClient BuildThrowingClient(Exception ex)
     {
         var handler = new Mock<HttpMessageHandler>();
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ThrowsAsync(ex);
-        var client = new HttpClient(handler.Object);
-        var factory = new Mock<IHttpClientFactory>();
-        factory.Setup(f => f.CreateClient("HealthCheck")).Returns(client);
-        return factory.Object;
+        return new HttpClient(handler.Object);
     }
 }

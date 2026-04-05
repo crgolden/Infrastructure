@@ -1,5 +1,7 @@
 namespace Infrastructure.Extensions;
 
+using System.Data;
+using System.Net;
 using System.Net.Sockets;
 using Azure.Core;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
@@ -8,20 +10,18 @@ using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
 using Elastic.Transport;
-using Infrastructure.HealthChecks;
-using Infrastructure.Hubs;
-using Infrastructure.Models;
-using Infrastructure.Services;
+using HealthChecks;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Options;
+using Models;
 using MongoDB.Driver;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Resend;
 using Serilog;
+using Services;
 using StackExchange.Redis;
 
 public static class HostApplicationBuilderExtensions
@@ -33,90 +33,106 @@ public static class HostApplicationBuilderExtensions
             // Fetch secrets
             var tasks = new[]
             {
-                secretClient.GetSecretAsync("ResendApiKey", cancellationToken: cancellationToken),
+                secretClient.GetSecretAsync("ResendApiToken", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("SqlServerUserId", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("SqlServerPassword", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("RedisPassword", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("MongoDbUsername", cancellationToken: cancellationToken),
                 secretClient.GetSecretAsync("MongoDbPassword", cancellationToken: cancellationToken),
+                secretClient.GetSecretAsync("MonitoringRecipientEmail", cancellationToken: cancellationToken)
             };
             var results = await Task.WhenAll(tasks);
             var resendApiKey = results[0].Value.Value;
+            if (IsNullOrWhiteSpace(resendApiKey))
+            {
+                throw new InvalidOperationException("Key Vault secret 'ResendApiToken' is missing or empty.");
+            }
+
+            var monitoringRecipientEmail = results[6].Value.Value;
+            if (IsNullOrWhiteSpace(monitoringRecipientEmail))
+            {
+                throw new InvalidOperationException("Key Vault secret 'MonitoringRecipientEmail' is missing or empty.");
+            }
+
             var sqlUserId = results[1].Value.Value;
             var sqlPassword = results[2].Value.Value;
             var redisPassword = results[3].Value.Value;
             var mongoUsername = results[4].Value.Value;
             var mongoPassword = results[5].Value.Value;
 
-            // Validate alert configuration
-            var recipientEmail = builder.Configuration.GetValue<string>("AlertOptions:RecipientEmail");
-            if (IsNullOrWhiteSpace(resendApiKey))
-            {
-                throw new InvalidOperationException("Key Vault secret 'ResendApiKey' is missing or empty.");
-            }
-
-            if (IsNullOrWhiteSpace(recipientEmail))
-            {
-                throw new InvalidOperationException("Configuration 'AlertOptions:RecipientEmail' is missing or empty.");
-            }
-
             // Options
-            builder.Services.Configure<MonitoringOptions>(builder.Configuration.GetSection("MonitoringOptions"));
-            builder.Services.Configure<AlertOptions>(builder.Configuration.GetSection("AlertOptions"));
-            builder.Services.Configure<ServiceEndpointOptions>(builder.Configuration.GetSection("ServiceEndpoints"));
+            builder.Services.Configure<MonitoringOptions>(builder.Configuration.GetSection(nameof(MonitoringOptions)));
+            builder.Services.Configure<AlertOptions>(alertOptions =>
+            {
+                alertOptions.RecipientEmail = monitoringRecipientEmail;
+            });
+            builder.Services.Configure<ServiceEndpointOptions>(builder.Configuration.GetSection(nameof(ServiceEndpointOptions)));
 
             // Resend
             builder.Services
-                .Configure<ResendClientOptions>(configureOptions =>
-                {
-                    configureOptions.ApiToken = resendApiKey;
-                })
+                .Configure<ResendClientOptions>(resendClientOptions => resendClientOptions.ApiToken = resendApiKey)
                 .AddHttpClient<ResendClient>().Services
                 .AddTransient<IResend, ResendClient>();
 
-            // Named HttpClient for health checks (ignores TLS cert errors for self-signed local certs)
-            builder.Services.AddHttpClient("HealthCheck")
-                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-                {
-                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-                });
+            // Typed HttpClients for health checks
+            builder.Services.AddHttpClient<IisHttpHealthCheck>();
+            builder.Services.AddHttpClient<IisHttpsHealthCheck>();
+            builder.Services.AddHttpClient<ElasticsearchHealthCheck>();
+            builder.Services.AddHttpClient<KibanaHealthCheck>();
+            builder.Services.AddHttpClient<PlexHealthCheck>();
 
             // SQL Server connection factory
-            var sqlBuilder = builder.Configuration.GetSection("SqlConnectionStringBuilder").Get<SqlConnectionStringBuilder>()
-                ?? throw new InvalidOperationException("Invalid 'SqlConnectionStringBuilder' configuration.");
-            sqlBuilder.UserID = sqlUserId;
-            sqlBuilder.Password = sqlPassword;
-            var sqlConnectionString = sqlBuilder.ConnectionString;
-            builder.Services.AddTransient<Func<SqlConnection>>(_ => () => new SqlConnection(sqlConnectionString));
+            builder.Services.AddTransient<Func<IDbConnection>>(sp => () =>
+            {
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var sqlBuilder = configuration.GetSection(nameof(SqlConnectionStringBuilder)).Get<SqlConnectionStringBuilder>() ?? throw new InvalidOperationException($"Invalid '{nameof(SqlConnectionStringBuilder)}' configuration.");
+                if (sqlBuilder.IntegratedSecurity)
+                {
+                    return new SqlConnection(sqlBuilder.ConnectionString);
+                }
+
+                sqlBuilder.UserID = sqlUserId;
+                sqlBuilder.Password = sqlPassword;
+                return new SqlConnection(sqlBuilder.ConnectionString);
+            });
 
             // Redis
-            var redisHost = builder.Configuration.GetValue<string>("RedisHost") ?? throw new InvalidOperationException("Invalid 'RedisHost'.");
-            var redisPort = builder.Configuration.GetValue<int?>("RedisPort") ?? throw new InvalidOperationException("Invalid 'RedisPort'.");
-            var redisOptions = new ConfigurationOptions
+            builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
             {
-                Password = redisPassword,
-                EndPoints = [new System.Net.DnsEndPoint(redisHost, redisPort)],
-            };
-            var muxer = await ConnectionMultiplexer.ConnectAsync(redisOptions);
-            builder.Services.AddSingleton<IConnectionMultiplexer>(muxer);
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var redisHost = configuration.GetValue<string?>("RedisHost") ?? throw new InvalidOperationException("Invalid 'RedisHost'.");
+                var redisPort = configuration.GetValue<int?>("RedisPort") ?? throw new InvalidOperationException("Invalid 'RedisPort'.");
+                var endPoint = new DnsEndPoint(redisHost, redisPort);
+                var redisOptions = new ConfigurationOptions
+                {
+                    Password = redisPassword,
+                    EndPoints = [endPoint],
+                    Ssl = true
+                };
+                return ConnectionMultiplexer.Connect(redisOptions);
+            });
 
             // MongoDB
-            var mongoHost = builder.Configuration.GetValue<string>("MongoDbHost") ?? throw new InvalidOperationException("Invalid 'MongoDbHost'.");
-            var mongoPort = builder.Configuration.GetValue<int?>("MongoDbPort") ?? throw new InvalidOperationException("Invalid 'MongoDbPort'.");
-            var mongoSettings = new MongoClientSettings
+            builder.Services.AddSingleton<IMongoClient>(sp =>
             {
-                Server = new MongoServerAddress(mongoHost, mongoPort),
-                Credential = MongoCredential.CreateCredential("admin", mongoUsername, mongoPassword),
-            };
-            builder.Services.AddSingleton<IMongoClient>(new MongoClient(mongoSettings));
+                var configuration = sp.GetRequiredService<IConfiguration>();
+                var mongoHost = configuration.GetValue<string?>("MongoDbHost") ?? throw new InvalidOperationException("Invalid 'MongoDbHost'.");
+                var mongoPort = configuration.GetValue<int?>("MongoDbPort") ?? throw new InvalidOperationException("Invalid 'MongoDbPort'.");
+                var mongoSettings = new MongoClientSettings
+                {
+                    Server = new MongoServerAddress(mongoHost, mongoPort),
+                    Credential = MongoCredential.CreateCredential("admin", mongoUsername, mongoPassword),
+                };
+                return new MongoClient(mongoSettings);
+            });
 
             // TcpClient factory for Yawcam
             builder.Services.AddTransient<Func<TcpClient>>(_ => () => new TcpClient());
 
             // Health checks
             builder.Services.AddHealthChecks()
-                .AddCheck<IISHttpsHealthCheck>("IIS HTTPS", tags: ["iis"])
-                .AddCheck<IISHttpHealthCheck>("IIS HTTP (CertifyTheWeb)", tags: ["iis"])
+                .AddCheck<IisHttpsHealthCheck>("IIS HTTPS", tags: ["iis"])
+                .AddCheck<IisHttpHealthCheck>("IIS HTTP (CertifyTheWeb)", tags: ["iis"])
                 .AddCheck<SqlServerHealthCheck>("SQL Server", tags: ["database"])
                 .AddCheck<ElasticsearchHealthCheck>("Elasticsearch", tags: ["search"])
                 .AddCheck<KibanaHealthCheck>("Kibana", tags: ["analytics"])

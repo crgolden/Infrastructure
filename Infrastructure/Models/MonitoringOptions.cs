@@ -2,5 +2,5 @@ namespace Infrastructure.Models;
 
 public sealed class MonitoringOptions
 {
-    public int IntervalSeconds { get; set; } = 30;
+    public int? IntervalSeconds { get; set; }
 }

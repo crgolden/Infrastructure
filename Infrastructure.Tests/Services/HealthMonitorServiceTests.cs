@@ -1,12 +1,12 @@
 namespace Infrastructure.Tests.Services;
 
 using Infrastructure.Hubs;
-using Infrastructure.Models;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Models;
 using Moq;
 
 [Trait("Category", "Unit")]

@@ -1,9 +1,9 @@
 namespace Infrastructure.Tests.Controllers;
 
 using Infrastructure.Controllers;
-using Infrastructure.Models;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
+using Models;
 using Moq;
 
 [Trait("Category", "Unit")]

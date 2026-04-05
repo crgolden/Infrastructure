@@ -4,14 +4,22 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-public sealed class MongoDbHealthCheck(IMongoClient mongoClient) : IHealthCheck
+public sealed class MongoDbHealthCheck : IHealthCheck
 {
+    private readonly IMongoClient _mongoClient;
+
+    public MongoDbHealthCheck(IMongoClient mongoClient)
+    {
+        _mongoClient = mongoClient;
+    }
+
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
         try
         {
-            var db = mongoClient.GetDatabase("admin");
-            var command = new BsonDocumentCommand<BsonDocument>(new BsonDocument("ping", 1));
+            var db = _mongoClient.GetDatabase("admin");
+            var document = new BsonDocument("ping", 1);
+            var command = new BsonDocumentCommand<BsonDocument>(document);
             await db.RunCommandAsync(command, cancellationToken: cancellationToken);
             return HealthCheckResult.Healthy("Ping OK");
         }
