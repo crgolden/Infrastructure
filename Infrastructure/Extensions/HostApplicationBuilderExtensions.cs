@@ -122,6 +122,7 @@ public static class HostApplicationBuilderExtensions
                 {
                     Server = new MongoServerAddress(mongoHost, mongoPort),
                     Credential = MongoCredential.CreateCredential("admin", mongoUsername, mongoPassword),
+                    UseTls = true
                 };
                 return new MongoClient(mongoSettings);
             });
