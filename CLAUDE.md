@@ -11,7 +11,7 @@ The solution (`Infrastructure.slnx`) contains two projects:
 
 ## What This App Does
 
-Continuously polls 9 critical services on the host machine (`deeprog.servehttp.com`) and:
+Continuously polls 12 services and:
 1. Displays a real-time Bootstrap 5 dashboard (SignalR push every 30 s)
 2. Sends an alert email via Resend when any service transitions `Healthy → Unhealthy`
 3. Sends a recovery email when it transitions back to `Healthy`
@@ -39,6 +39,9 @@ Follows the **onion / clean architecture** model matching the sibling repos:
 | Yawcam AI | `YawcamHealthCheck` | TCP connect `:5995` |
 | Redis | `RedisHealthCheck` | `PING` via `IConnectionMultiplexer` |
 | MongoDB | `MongoDbHealthCheck` | `ping` via `IMongoClient` |
+| Identity | `IdentityHealthCheck` | HTTP GET `/health`, expects `200 Healthy` |
+| Manuals | `ManualsHealthCheck` | HTTP GET `/health`, expects `200 Healthy` |
+| Experience | `ExperienceHealthCheck` | HTTP GET `/health`, expects `200 Healthy` |
 
 ## Key Architecture Points
 
@@ -48,6 +51,7 @@ Follows the **onion / clean architecture** model matching the sibling repos:
 - `AddObservabilityAsync(SecretClient)` — Serilog + Elasticsearch sink
 - `AddDataProtection(TokenCredential)` — Azure Blob + Key Vault (identical to Manuals)
 - Secrets fetched from Azure Key Vault at startup; `appsettings.json` holds only null-valued non-secret config
+- Sibling-app health check URLs (`Identity`, `Manuals`, `Experience`) are non-secret and stored directly in `appsettings.json`; unlike other endpoints they also validate response body equals `"Healthy"`
 
 ### Health Check Testability
 Each `IHealthCheck` accepts its external dependency via constructor injection for easy Moq mocking:

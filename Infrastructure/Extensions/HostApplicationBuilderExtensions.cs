@@ -94,6 +94,9 @@ public static class HostApplicationBuilderExtensions
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
             });
             builder.Services.AddHttpClient<PlexHealthCheck>();
+            builder.Services.AddHttpClient<IdentityHealthCheck>();
+            builder.Services.AddHttpClient<ManualsHealthCheck>();
+            builder.Services.AddHttpClient<ExperienceHealthCheck>();
 
             // SQL Server connection factory
             builder.Services.AddTransient<Func<IDbConnection>>(sp => () =>
@@ -154,7 +157,10 @@ public static class HostApplicationBuilderExtensions
                 .AddCheck<PlexHealthCheck>("Plex", tags: ["media"])
                 .AddCheck<YawcamHealthCheck>("Yawcam AI", tags: ["surveillance"])
                 .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])
-                .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"]);
+                .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
+                .AddCheck<IdentityHealthCheck>("Identity", tags: ["service"])
+                .AddCheck<ManualsHealthCheck>("Manuals", tags: ["service"])
+                .AddCheck<ExperienceHealthCheck>("Experience", tags: ["service"]);
 
             // SignalR
             builder.Services.AddSignalR()

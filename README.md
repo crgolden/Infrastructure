@@ -19,6 +19,9 @@ An ASP.NET Core 10 service-health monitoring application that continuously polls
 | Yawcam AI | 5995 | TCP connect |
 | Redis | 6379 | `PING` via `IConnectionMultiplexer` |
 | MongoDB | 27017 | `ping` command via `IMongoClient` |
+| Identity | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| Manuals | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| Experience | 443 | HTTP GET `/health`, expects `200 Healthy` |
 
 Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert email is sent via Resend. A recovery email is sent when the service returns to `Healthy`.
 
