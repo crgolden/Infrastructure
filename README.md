@@ -1,5 +1,9 @@
 # Infrastructure
 
+[![Build and deploy ASP.Net Core app to Azure Web App - crgolden-infrastructure](https://github.com/crgolden/Infrastructure/actions/workflows/main_crgolden-infrastructure.yml/badge.svg)](https://github.com/crgolden/Infrastructure/actions/workflows/main_crgolden-infrastructure.yml)
+
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=crgolden_Infrastructure&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=crgolden_Infrastructure)
+
 An ASP.NET Core 10 service-health monitoring application that continuously polls critical infrastructure services, displays a real-time dashboard, and emails alerts on status changes.
 
 ## Services Monitored

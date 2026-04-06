@@ -21,6 +21,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Resend;
+using System.Text.Json.Serialization;
 using Serilog;
 using Services;
 using StackExchange.Redis;
@@ -156,7 +157,11 @@ public static class HostApplicationBuilderExtensions
                 .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"]);
 
             // SignalR
-            builder.Services.AddSignalR();
+            builder.Services.AddSignalR()
+                .AddJsonProtocol(options =>
+                {
+                    options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                });
 
             // Alert service
             builder.Services.AddSingleton<IAlertService, AlertService>();
