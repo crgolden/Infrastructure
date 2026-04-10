@@ -74,7 +74,7 @@ Secrets → Azure Key Vault (fetched at startup via `SecretClient`)
 See `README.md` for the full configuration reference.
 
 ### Observability
-- **Serilog** + Elasticsearch sink (`Elastic.Serilog.Sinks` `8.19.0` — latest 8.x release, compatible with self-hosted ES 8.19.13; do not upgrade to 9.x while on ES 8.x), console sink bootstrap
+- **Serilog** + Elasticsearch sink (`Elastic.Serilog.Sinks` 9.0.0), console sink bootstrap
 - **Azure Monitor OpenTelemetry** — metrics and traces
 - Health check endpoint at `/health`; health check requests filtered from traces
 
