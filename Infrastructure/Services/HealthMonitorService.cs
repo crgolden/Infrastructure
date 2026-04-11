@@ -6,7 +6,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
 
-public sealed class HealthMonitorService : BackgroundService, IHealthMonitorService
+public sealed partial class HealthMonitorService : BackgroundService, IHealthMonitorService
 {
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
@@ -50,13 +50,19 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Health monitor started. Polling every {Seconds}s.", _intervalSeconds);
+        LogMonitorStarted(_logger, _intervalSeconds);
         while (!stoppingToken.IsCancellationRequested)
         {
             await PollAsync(stoppingToken);
             await Task.Delay(TimeSpan.FromSeconds(_intervalSeconds), stoppingToken);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Health monitor started. Polling every {Seconds}s.")]
+    private static partial void LogMonitorStarted(ILogger logger, int seconds);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Service {Name} recovered to Healthy.")]
+    private static partial void LogServiceRecovered(ILogger logger, string name);
 
     private static ServiceStatus MapStatus(HealthStatus status) => status switch
     {
@@ -97,7 +103,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
                     await _alertService.SendAlertAsync(result, cancellationToken);
                     break;
                 case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
-                    _logger.LogInformation("Service {Name} recovered to Healthy.", result.Name);
+                    LogServiceRecovered(_logger, result.Name);
                     await _alertService.SendRecoveryAsync(result, cancellationToken);
                     break;
             }

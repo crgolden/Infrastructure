@@ -25,18 +25,34 @@ An ASP.NET Core 10 service-health monitoring application that continuously polls
 
 Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert email is sent via Resend. A recovery email is sent when the service returns to `Healthy`.
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | ASP.NET Core 10 |
+| Real-time dashboard | SignalR |
+| Email alerts | Resend |
+| Observability | Azure Monitor, OpenTelemetry, Serilog, Elasticsearch |
+| Hosting | Azure App Service |
+| Secrets | Azure Key Vault |
+| Data Protection | Azure Blob Storage + Azure Key Vault |
+
 ## Prerequisites
 
-- .NET 10 SDK
-- Azure CLI (`az login`) for local development (used by `DefaultAzureCredential`)
-- Azure Key Vault with the secrets listed below
-- A Resend account with `noreply@crgolden.com` verified as a sender domain
+| Tool | Notes |
+|---|---|
+| .NET 10 SDK | |
+| Azure CLI | `az login` for local dev (used by `DefaultAzureCredential`) |
+| Azure Key Vault | With the secrets listed below |
+| Resend account | `noreply@crgolden.com` verified as a sender domain |
 
-## Configuration
+## Getting Started
+
+### 1. Configure User Secrets
 
 All `null` values in `appsettings.json` must be supplied via **User Secrets** (development) or environment variables / Azure App Configuration (production). Secret values are fetched from **Azure Key Vault** at startup.
 
-### Non-secret values (User Secrets / environment)
+**Non-secret values (User Secrets / environment):**
 
 | Key | Description |
 |---|---|
@@ -60,7 +76,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `MongoDbHost` | MongoDB hostname |
 | `MongoDbPort` | MongoDB port |
 
-### Secrets (Azure Key Vault)
+**Secrets (Azure Key Vault):**
 
 | Secret name | Description |
 |---|---|
@@ -73,35 +89,49 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `MongoDbUsername` | MongoDB username |
 | `MongoDbPassword` | MongoDB password |
 
-## Build & Run
+### 2. Run
+
+```bash
+cd Infrastructure
+dotnet run
+```
+
+| Endpoint | URL |
+|---|---|
+| Dashboard | `https://localhost:5001/` |
+| JSON status API | `https://localhost:5001/api/status` |
+| ASP.NET Core health endpoint | `https://localhost:5001/health` |
+
+## Project Structure
+
+```
+Infrastructure/        # ASP.NET Core 10 — health polling, SignalR dashboard, Resend email alerts
+Infrastructure.Tests/  # xUnit v3 unit tests (Moq)
+```
+
+## Commands
 
 ```bash
 # Build
 dotnet build
 
-# Run (development — requires User Secrets and az login)
-cd Infrastructure
-dotnet run
+# Unit tests only
+dotnet test --project Infrastructure.Tests --configuration Release -- --filter-trait "Category=Unit"
 
-# Dashboard
-https://localhost:5001/
-
-# JSON status API
-https://localhost:5001/api/status
-
-# ASP.NET Core health endpoint
-https://localhost:5001/health
-
-# Test
-dotnet test --project Infrastructure.Tests -- --filter-trait "Category=Unit"
+# Publish web app (-r win-x86 required: Azure App Service Free tier supports 32-bit only)
+dotnet publish Infrastructure -c Release -r win-x86 --self-contained false -o ./publish
 ```
 
 ## Deployment
 
-Deployed to Azure App Service via GitHub Actions. Health checks connect to services via the external hostname (`deeprog.servehttp.com`) and router-forwarded ports.
+The GitHub Actions workflow triggers on pushes to `main` and pull requests.
 
-```bash
-dotnet publish Infrastructure -c Release -r win-x86 --self-contained false -o ./publish
-```
+**Build job** — runs on every trigger:
+1. Builds the solution (`dotnet build --configuration Release`)
+2. Runs unit tests with coverage
+3. Runs SonarCloud analysis, publishes the web app, and uploads the artifact
+
+**Deploy job** — runs after a successful build on `main`:
+1. Deploys the web app to **Azure App Service** `crgolden-infrastructure` (Production slot) via Azure OIDC
 
 > **Firewall note:** Windows Firewall inbound rules for monitored ports (1433, 9200, 5601, 32400, 5995, 6379, 27017) must allow inbound traffic from Azure App Service outbound IPs. Update any rules scoped to specific IPs or the local subnet accordingly.

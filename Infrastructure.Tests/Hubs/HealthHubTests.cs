@@ -9,6 +9,6 @@ public sealed class HealthHubTests
     public void HealthHub_IsSignalRHub()
     {
         var hub = new HealthHub();
-        Assert.IsAssignableFrom<Microsoft.AspNetCore.SignalR.Hub>(hub);
+        Assert.IsType<Microsoft.AspNetCore.SignalR.Hub>(hub, exactMatch: false);
     }
 }
