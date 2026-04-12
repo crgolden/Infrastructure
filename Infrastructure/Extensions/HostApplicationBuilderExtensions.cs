@@ -176,6 +176,10 @@ public static class HostApplicationBuilderExtensions
             builder.Services.AddSingleton<IHealthMonitorService, HealthMonitorService>();
             builder.Services.AddHostedService(sp => (HealthMonitorService)sp.GetRequiredService<IHealthMonitorService>());
 
+            // Keepalive: self-ping to prevent Azure Free tier idle recycling
+            builder.Services.AddHttpClient<KeepaliveService>();
+            builder.Services.AddHostedService<KeepaliveService>();
+
             return builder;
         }
 
@@ -210,6 +214,7 @@ public static class HostApplicationBuilderExtensions
                 .WithMetrics(meterProviderBuilder =>
                 {
                     meterProviderBuilder
+                        .AddMeter(nameof(Infrastructure))
                         .AddAspNetCoreInstrumentation()
                         .AddHttpClientInstrumentation()
                         .AddRuntimeInstrumentation();
@@ -218,7 +223,7 @@ public static class HostApplicationBuilderExtensions
                 {
                     tracerProviderBuilder
                         .SetSampler(new AlwaysOnSampler())
-                        .AddSource(builder.Environment.ApplicationName)
+                        .AddSource(nameof(Infrastructure))
                         .AddAspNetCoreInstrumentation(aspNetCoreTraceInstrumentationOptions =>
                         {
                             aspNetCoreTraceInstrumentationOptions.Filter = context =>
@@ -235,7 +240,10 @@ public static class HostApplicationBuilderExtensions
                     loggerConfiguration
                         .ReadFrom.Configuration(builder.Configuration)
                         .ReadFrom.Services(sp)
-                        .Enrich.FromLogContext();
+                        .Enrich.FromLogContext()
+                        .Enrich.WithMachineName()
+                        .Enrich.WithEnvironmentName()
+                        .Enrich.WithProperty("ApplicationName", "crgolden-infrastructure");
                     if (builder.Environment.IsProduction())
                     {
                         loggerConfiguration

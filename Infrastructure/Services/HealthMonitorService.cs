@@ -1,5 +1,6 @@
 namespace Infrastructure.Services;
 
+using System.Diagnostics;
 using Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -74,6 +75,7 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
 
     private async Task PollAsync(CancellationToken cancellationToken)
     {
+        using var activity = Telemetry.ActivitySource.StartActivity("infrastructure.health.poll");
         var report = await _healthCheckService.CheckHealthAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
         var results = report.Entries.Select(entry => new ServiceHealthResult(
@@ -100,10 +102,18 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
             {
                 case ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
                     _logger.LogWarning("Service {Name} transitioned to Unhealthy: {Description}", result.Name, result.Description);
+                    Telemetry.Metrics.StatusTransitions.Add(
+                        1,
+                        new KeyValuePair<string, object?>("service.name", result.Name),
+                        new KeyValuePair<string, object?>("transition", "healthy_to_unhealthy"));
                     await _alertService.SendAlertAsync(result, cancellationToken);
                     break;
                 case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
                     LogServiceRecovered(_logger, result.Name);
+                    Telemetry.Metrics.StatusTransitions.Add(
+                        1,
+                        new KeyValuePair<string, object?>("service.name", result.Name),
+                        new KeyValuePair<string, object?>("transition", "unhealthy_to_healthy"));
                     await _alertService.SendRecoveryAsync(result, cancellationToken);
                     break;
             }

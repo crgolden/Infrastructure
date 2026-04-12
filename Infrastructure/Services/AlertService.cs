@@ -1,5 +1,6 @@
 namespace Infrastructure.Services;
 
+using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using Models;
 using Resend;
@@ -22,7 +23,7 @@ public sealed class AlertService : IAlertService
         _to = options.Value.RecipientEmail;
     }
 
-    public Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
+    public async Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
     {
         var message = new EmailMessage
         {
@@ -37,10 +38,14 @@ public sealed class AlertService : IAlertService
                 """,
         };
         message.To.Add(_to);
-        return _resend.EmailSendAsync(message, cancellationToken);
+
+        using var activity = Telemetry.ActivitySource.StartActivity("infrastructure.resend.send_alert");
+        activity?.SetTag("alert.service_name", result.Name);
+        activity?.SetTag("alert.type", "alert");
+        await _resend.EmailSendAsync(message, cancellationToken);
     }
 
-    public Task SendRecoveryAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
+    public async Task SendRecoveryAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
     {
         var message = new EmailMessage
         {
@@ -55,6 +60,10 @@ public sealed class AlertService : IAlertService
                 """,
         };
         message.To.Add(_to);
-        return _resend.EmailSendAsync(message, cancellationToken);
+
+        using var activity = Telemetry.ActivitySource.StartActivity("infrastructure.resend.send_recovery");
+        activity?.SetTag("alert.service_name", result.Name);
+        activity?.SetTag("alert.type", "recovery");
+        await _resend.EmailSendAsync(message, cancellationToken);
     }
 }
