@@ -97,6 +97,7 @@ public static class HostApplicationBuilderExtensions
             builder.Services.AddHttpClient<IdentityHealthCheck>();
             builder.Services.AddHttpClient<ManualsHealthCheck>();
             builder.Services.AddHttpClient<ExperienceHealthCheck>();
+            builder.Services.AddHttpClient<ProductsHealthCheck>();
 
             // SQL Server connection factory
             builder.Services.AddTransient<Func<IDbConnection>>(sp => () =>
@@ -160,7 +161,8 @@ public static class HostApplicationBuilderExtensions
                 .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
                 .AddCheck<IdentityHealthCheck>("Identity", tags: ["service"])
                 .AddCheck<ManualsHealthCheck>("Manuals", tags: ["service"])
-                .AddCheck<ExperienceHealthCheck>("Experience", tags: ["service"]);
+                .AddCheck<ExperienceHealthCheck>("Experience", tags: ["service"])
+                .AddCheck<ProductsHealthCheck>("Products", tags: ["service"]);
 
             // SignalR
             builder.Services.AddSignalR()
