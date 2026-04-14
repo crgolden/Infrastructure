@@ -20,7 +20,7 @@ public sealed class MongoDbHealthCheckTests
             .ReturnsAsync(new BsonDocument("ok", 1));
 
         var client = new Mock<IMongoClient>();
-        client.Setup(c => c.GetDatabase("admin", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
+        client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
 
         var check = new MongoDbHealthCheck(client.Object);
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("MongoDB", check, null, null) };
@@ -41,7 +41,7 @@ public sealed class MongoDbHealthCheckTests
             .ThrowsAsync(new MongoConnectionException(new MongoDB.Driver.Core.Connections.ConnectionId(new MongoDB.Driver.Core.Servers.ServerId(new MongoDB.Driver.Core.Clusters.ClusterId(), new System.Net.DnsEndPoint("localhost", 27017))), "timeout"));
 
         var client = new Mock<IMongoClient>();
-        client.Setup(c => c.GetDatabase("admin", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
+        client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
 
         var check = new MongoDbHealthCheck(client.Object);
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("MongoDB", check, null, null) };
@@ -55,7 +55,7 @@ public sealed class MongoDbHealthCheckTests
     public async Task CheckHealthAsync_WhenGetDatabaseThrows_ReturnsUnhealthy()
     {
         var client = new Mock<IMongoClient>();
-        client.Setup(c => c.GetDatabase("admin", It.IsAny<MongoDatabaseSettings>()))
+        client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>()))
             .Throws(new InvalidOperationException("not connected"));
 
         var check = new MongoDbHealthCheck(client.Object);
