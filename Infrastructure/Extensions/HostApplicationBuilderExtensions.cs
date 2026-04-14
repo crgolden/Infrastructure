@@ -139,7 +139,7 @@ public static class HostApplicationBuilderExtensions
                 var mongoSettings = new MongoClientSettings
                 {
                     Server = new MongoServerAddress(mongoHost, mongoPort),
-                    Credential = MongoCredential.CreateCredential("admin", mongoUsername, mongoPassword),
+                    Credential = MongoCredential.CreateCredential("crgolden", mongoUsername, mongoPassword),
                     UseTls = true
                 };
                 return new MongoClient(mongoSettings);
