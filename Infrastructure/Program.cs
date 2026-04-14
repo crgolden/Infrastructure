@@ -34,8 +34,8 @@ try
                 return;
             }
 
-            diagnosticContext.Set("TraceId", activity.TraceId.ToString());
-            diagnosticContext.Set("SpanId", activity.SpanId.ToString());
+            diagnosticContext.Set(nameof(Activity.TraceId), activity.TraceId.ToString());
+            diagnosticContext.Set(nameof(Activity.SpanId), activity.SpanId.ToString());
         };
     });
     if (app.Environment.IsDevelopment())
@@ -48,7 +48,7 @@ try
     }
 
     app.UseHttpsRedirection();
-    app.MapHealthChecks("/Health").DisableHttpMetrics();
+    app.MapHealthChecks("/health").DisableHttpMetrics();
     app.MapGet("/ping", () => Results.Ok()).DisableHttpMetrics();
     app.MapStaticAssets();
     app.MapControllers();
