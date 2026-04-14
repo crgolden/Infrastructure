@@ -17,7 +17,7 @@ public sealed class MongoDbHealthCheck : IHealthCheck
     {
         try
         {
-            var db = _mongoClient.GetDatabase("admin");
+            var db = _mongoClient.GetDatabase("crgolden");
             var document = new BsonDocument("ping", 1);
             var command = new BsonDocumentCommand<BsonDocument>(document);
             await db.RunCommandAsync(command, cancellationToken: cancellationToken);
