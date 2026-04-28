@@ -45,6 +45,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `ManualsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `MongoDbHealthCheckTests` | `IMongoClient` | `ping` command |
 | `PlexHealthCheckTests` | `IHttpClientFactory` | `GET /identity` |
+| `ProductsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `RedisHealthCheckTests` | `IConnectionMultiplexer` | `PING` command |
 | `SqlServerHealthCheckTests` | `Func<SqlConnection>` | `SELECT 1` |
 | `YawcamHealthCheckTests` | `Func<TcpClient>` | TCP connect `:5995` |

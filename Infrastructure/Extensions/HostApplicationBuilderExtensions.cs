@@ -28,6 +28,8 @@ using StackExchange.Redis;
 
 public static class HostApplicationBuilderExtensions
 {
+    private const string ServiceTag = "service";
+
     extension(IHostApplicationBuilder builder)
     {
         public async Task<IHostApplicationBuilder> AddMonitoringServicesAsync(SecretClient secretClient, CancellationToken cancellationToken = default)
@@ -159,10 +161,10 @@ public static class HostApplicationBuilderExtensions
                 .AddCheck<YawcamHealthCheck>("Yawcam AI", tags: ["surveillance"])
                 .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])
                 .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
-                .AddCheck<IdentityHealthCheck>("Identity", tags: ["service"])
-                .AddCheck<ManualsHealthCheck>("Manuals", tags: ["service"])
-                .AddCheck<ExperienceHealthCheck>("Experience", tags: ["service"])
-                .AddCheck<ProductsHealthCheck>("Products", tags: ["service"]);
+                .AddCheck<IdentityHealthCheck>("Identity", tags: [ServiceTag])
+                .AddCheck<ManualsHealthCheck>("Manuals", tags: [ServiceTag])
+                .AddCheck<ExperienceHealthCheck>("Experience", tags: [ServiceTag])
+                .AddCheck<ProductsHealthCheck>("Products", tags: [ServiceTag]);
 
             // SignalR
             builder.Services.AddSignalR()

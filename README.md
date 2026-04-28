@@ -6,6 +6,17 @@
 
 An ASP.NET Core 10 service-health monitoring application that continuously polls critical infrastructure services, displays a real-time dashboard, and emails alerts on status changes.
 
+## Sibling Applications
+
+Infrastructure is the **observability surface** for a five-app system. It polls each sibling's `/health` endpoint and sends an alert email on the first `Healthy → Unhealthy` transition (and a recovery email on the way back).
+
+| Repo | Role | How Infrastructure interacts |
+|---|---|---|
+| [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | `GET /health` — expects `200 Healthy` |
+| [Experience](https://github.com/crgolden/Experience) | Angular SPA + ASP.NET Core BFF | `GET /health` — expects `200 Healthy` |
+| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | `GET /health` — expects `200 Healthy` |
+| [Products](https://github.com/crgolden/Products) | OData v4 product catalog API | `GET /health` — expects `200 Healthy` |
+
 ## Services Monitored
 
 | Service | Port | Check Method |
@@ -19,9 +30,10 @@ An ASP.NET Core 10 service-health monitoring application that continuously polls
 | Yawcam AI | 5995 | TCP connect |
 | Redis | 6379 | `PING` via `IConnectionMultiplexer` |
 | MongoDB | 27017 | `ping` command via `IMongoClient` |
-| Identity | 443 | HTTP GET `/health`, expects `200 Healthy` |
-| Manuals | 443 | HTTP GET `/health`, expects `200 Healthy` |
-| Experience | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| [Identity](https://github.com/crgolden/Identity) | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| [Manuals](https://github.com/crgolden/Manuals) | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| [Experience](https://github.com/crgolden/Experience) | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| [Products](https://github.com/crgolden/Products) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 
 Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert email is sent via Resend. A recovery email is sent when the service returns to `Healthy`.
 
