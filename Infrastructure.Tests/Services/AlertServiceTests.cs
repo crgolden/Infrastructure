@@ -1,6 +1,7 @@
 namespace Infrastructure.Tests.Services;
 
 using Infrastructure.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Models;
 using Moq;
@@ -16,7 +17,7 @@ public sealed class AlertServiceTests
         resend.Setup(r => r.EmailSendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult<ResendResponse<Guid>>(default!));
 
-        var service = new AlertService(resend.Object, GetDefaultOptions());
+        var service = new AlertService(BuildScopeFactory(resend.Object), GetDefaultOptions());
         var result = new ServiceHealthResult("SQL Server", ServiceStatus.Unhealthy, "Connection refused", DateTimeOffset.UtcNow);
 
         await service.SendAlertAsync(result, CancellationToken.None);
@@ -39,7 +40,7 @@ public sealed class AlertServiceTests
         resend.Setup(r => r.EmailSendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult<ResendResponse<Guid>>(default!));
 
-        var service = new AlertService(resend.Object, GetDefaultOptions());
+        var service = new AlertService(BuildScopeFactory(resend.Object), GetDefaultOptions());
         var result = new ServiceHealthResult("SQL Server", ServiceStatus.Healthy, "Connected", DateTimeOffset.UtcNow);
 
         await service.SendRecoveryAsync(result, CancellationToken.None);
@@ -62,11 +63,25 @@ public sealed class AlertServiceTests
         resend.Setup(r => r.EmailSendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Resend API error"));
 
-        var service = new AlertService(resend.Object, GetDefaultOptions());
+        var service = new AlertService(BuildScopeFactory(resend.Object), GetDefaultOptions());
         var result = new ServiceHealthResult("Redis", ServiceStatus.Unhealthy, "Timeout", DateTimeOffset.UtcNow);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.SendAlertAsync(result, CancellationToken.None));
+    }
+
+    private static IServiceScopeFactory BuildScopeFactory(IResend resend)
+    {
+        var sp = new Mock<IServiceProvider>();
+        sp.Setup(x => x.GetService(typeof(IResend))).Returns(resend);
+
+        var scope = new Mock<IServiceScope>();
+        scope.Setup(x => x.ServiceProvider).Returns(sp.Object);
+
+        var factory = new Mock<IServiceScopeFactory>();
+        factory.Setup(x => x.CreateScope()).Returns(scope.Object);
+
+        return factory.Object;
     }
 
     private static IOptions<AlertOptions> GetDefaultOptions() => Options.Create(new AlertOptions { RecipientEmail = "admin@example.com" });
