@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
 using MongoDB.Driver;
+using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -77,6 +78,8 @@ try
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword.Value;
         configurationOptions.Password = secrets.RedisPassword.Value;
         mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, secrets.MongoDbUsername.Value, secrets.MongoDbPassword.Value);
+        builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options =>
+            options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase));
         builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
         {
             openTelemetryLoggerOptions.IncludeFormattedMessage = true;
@@ -107,17 +110,11 @@ try
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
+                .AddMeter(nameof(Infrastructure))
                 .AddRuntimeInstrumentation())
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
                 .SetSampler(new AlwaysOnSampler())
-                .AddSource(nameof(Infrastructure))
-                .AddAspNetCoreInstrumentation(aspNetCoreTraceInstrumentationOptions =>
-                {
-                    aspNetCoreTraceInstrumentationOptions.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase);
-                })
-                .AddHttpClientInstrumentation())
+                .AddSource(nameof(Infrastructure)))
             .UseAzureMonitor().Services
             .AddDataProtection()
             .SetApplicationName(applicationName)

@@ -10,21 +10,16 @@ The Infrastructure test suite uses xUnit v3 and covers a single tier: **unit tes
 
 ---
 
-## Running tests locally
+For the `.NET 10 SDK xUnit caveat` (why `dotnet test` doesn't work), and why you run the compiled `.exe` directly, see the workspace-level [TESTING.md](../TESTING.md).
 
-```bash
-# Build first (required — xunit.v3.mtp-v2 on .NET 10 uses the compiled exe directly)
-dotnet build Infrastructure.Tests
+## Running Tests Locally
 
-# Run unit tests (Debug build)
-Infrastructure.Tests/bin/Debug/net10.0/Infrastructure.Tests.exe -trait "Category=Unit"
+No Azure credentials required — all tests are unit tests.
 
-# Or for Release build:
-dotnet build Infrastructure.Tests -c Release
-Infrastructure.Tests/bin/Release/net10.0/Infrastructure.Tests.exe -trait "Category=Unit"
+```powershell
+dotnet build Infrastructure.Tests --configuration Debug
+.\Infrastructure.Tests\bin\Debug\net10.0\Infrastructure.Tests.exe --filter-trait "Category=Unit" --show-live-output on
 ```
-
-> **Why run the `.exe` directly?** `Infrastructure.Tests` uses `xunit.v3.mtp-v2` (Microsoft Testing Platform) on .NET 10. There is no VSTest adapter for this combination — `dotnet test` will not discover the tests. The compiled executable is the correct entry point.
 
 ---
 

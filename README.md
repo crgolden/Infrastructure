@@ -54,7 +54,7 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 | Tool | Notes |
 |---|---|
 | .NET 10 SDK | |
-| Azure CLI | `az login` for local dev (used by `DefaultAzureCredential`) |
+| Azure Key Vault | Required in production only; non-production uses User Secrets |
 | Azure Key Vault | With the secrets listed below |
 | Resend account | `noreply@crgolden.com` verified as a sender domain |
 
@@ -62,7 +62,7 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 
 ### 1. Configure User Secrets
 
-All `null` values in `appsettings.json` must be supplied via **User Secrets** (development) or environment variables / Azure App Configuration (production). Secret values are fetched from **Azure Key Vault** at startup.
+All `null` values in `appsettings.json` must be supplied via **User Secrets** (development) or environment variables (CI) or Azure Key Vault (production). In non-production, `DefaultAzureCredential` is never constructed — all config comes from User Secrets or env vars.
 
 **Non-secret values (User Secrets / environment):**
 
@@ -92,7 +92,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 
 | Secret name | Description |
 |---|---|
-| `ResendApiKey` | Resend API key for email alerts |
+| `ResendApiToken` | Resend API token for email alerts |
 | `ElasticsearchUsername` | Elasticsearch username (Serilog sink) |
 | `ElasticsearchPassword` | Elasticsearch password (Serilog sink) |
 | `SqlServerUserId` | SQL Server login |
@@ -100,6 +100,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `RedisPassword` | Redis `AUTH` password |
 | `MongoDbUsername` | MongoDB username |
 | `MongoDbPassword` | MongoDB password |
+| `MonitoringRecipientEmail` | Alert destination email address |
 
 ### 2. Run
 
