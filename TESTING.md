@@ -18,7 +18,7 @@ No Azure credentials required — all tests are unit tests.
 
 ```powershell
 dotnet build Infrastructure.Tests --configuration Debug
-.\Infrastructure.Tests\bin\Debug\net10.0\Infrastructure.Tests.exe --filter-trait "Category=Unit" --show-live-output on
+.\Infrastructure.Tests\bin\Debug\net10.0\Infrastructure.Tests.exe -trait "Category=Unit" -showLiveOutput
 ```
 
 ---
@@ -74,3 +74,22 @@ The GitHub Actions workflow (`.github/workflows/main_crgolden-infrastructure.yml
 2. Run unit tests with coverage
 3. SonarCloud analysis
 4. Publish artifact → deploy to Azure App Service `crgolden-infrastructure`
+
+---
+
+## Local SonarCloud analysis
+
+Generate coverage first (unit tests only), then run from `Infrastructure/`:
+
+```powershell
+$env:SONAR_TOKEN = "<token>"
+& "$env:SystemDrive\sonar-scanner-8.0.1.6346-windows-x64\bin\sonar-scanner.bat" `
+  "-Dsonar.projectKey=crgolden_Infrastructure" `
+  "-Dsonar.organization=crgolden" `
+  "-Dsonar.sources=Infrastructure" `
+  "-Dsonar.tests=Infrastructure.Tests" `
+  "-Dsonar.exclusions=**/bin/**,**/obj/**" `
+  "-Dsonar.cs.vscoveragexml.reportsPaths=coverage.xml"
+```
+
+Required coverage files: `coverage.xml`.
