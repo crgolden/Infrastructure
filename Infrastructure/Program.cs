@@ -24,7 +24,6 @@ using MongoDB.Driver;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 using Resend;
 using Serilog;
 using StackExchange.Redis;
@@ -110,11 +109,7 @@ try
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
-                .AddMeter(nameof(Infrastructure))
                 .AddRuntimeInstrumentation())
-            .WithTracing(tracerProviderBuilder => tracerProviderBuilder
-                .SetSampler(new AlwaysOnSampler())
-                .AddSource(nameof(Infrastructure)))
             .UseAzureMonitor().Services
             .AddDataProtection()
             .SetApplicationName(applicationName)

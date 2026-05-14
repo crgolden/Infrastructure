@@ -35,9 +35,6 @@ public sealed class AlertService : IAlertService
         await SendEmailAsync(
             subject: $"[ALERT] {result.Name} is {result.Status}",
             htmlBody: htmlBody,
-            activityName: "infrastructure.resend.send_alert",
-            activityType: "alert",
-            result: result,
             cancellationToken: cancellationToken);
     }
 
@@ -53,25 +50,16 @@ public sealed class AlertService : IAlertService
         await SendEmailAsync(
             subject: $"[RECOVERY] {result.Name} is {result.Status}",
             htmlBody: htmlBody,
-            activityName: "infrastructure.resend.send_recovery",
-            activityType: "recovery",
-            result: result,
             cancellationToken: cancellationToken);
     }
 
     private async Task SendEmailAsync(
         string subject,
         string htmlBody,
-        string activityName,
-        string activityType,
-        ServiceHealthResult result,
         CancellationToken cancellationToken)
     {
         var message = new EmailMessage { From = From, Subject = subject, HtmlBody = htmlBody };
         message.To.Add(_to);
-        using var activity = Telemetry.ActivitySource.StartActivity(activityName);
-        activity?.SetTag("alert.service_name", result.Name);
-        activity?.SetTag("alert.type", activityType);
         await _resend.EmailSendAsync(message, cancellationToken);
     }
 }
