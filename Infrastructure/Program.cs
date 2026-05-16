@@ -34,7 +34,7 @@ Serilog.Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrap
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    string elasticsearchUsername, elasticsearchPassword, resendApiToken, monitoringRecipientEmail;
+    string elasticsearchUsername, elasticsearchPassword, resendApiToken, adminEmail;
     IConfigurationSection monitoringOptionsSection = builder.Configuration.GetRequiredSection(nameof(MonitoringOptions)),
         serviceEndpointOptionsSection = builder.Configuration.GetRequiredSection(nameof(ServiceEndpointOptions)),
         sqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(SqlConnectionStringBuilder));
@@ -72,7 +72,7 @@ try
         elasticsearchUsername = secrets.ElasticsearchUsername.Value;
         elasticsearchPassword = secrets.ElasticsearchPassword.Value;
         resendApiToken = secrets.ResendApiToken.Value;
-        monitoringRecipientEmail = secrets.MonitoringRecipientEmail.Value;
+        adminEmail = secrets.AdminEmail.Value;
         sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId.Value;
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword.Value;
         configurationOptions.Password = secrets.RedisPassword.Value;
@@ -128,7 +128,7 @@ try
         elasticsearchUsername = secrets.ElasticsearchUsername;
         elasticsearchPassword = secrets.ElasticsearchPassword;
         resendApiToken = secrets.ResendApiToken;
-        monitoringRecipientEmail = secrets.MonitoringRecipientEmail;
+        adminEmail = secrets.AdminEmail;
         sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId;
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword;
         configurationOptions.Password = secrets.RedisPassword;
@@ -143,7 +143,7 @@ try
 
     builder.Services
         .Configure<MonitoringOptions>(monitoringOptionsSection)
-        .Configure<AlertOptions>(alertOptions => alertOptions.RecipientEmail = monitoringRecipientEmail)
+        .Configure<AlertOptions>(alertOptions => alertOptions.RecipientEmail = adminEmail)
         .Configure<ServiceEndpointOptions>(serviceEndpointOptionsSection)
         .Configure<ResendClientOptions>(resendClientOptions => resendClientOptions.ApiToken = resendApiToken)
         .AddHttpClient<ResendClient>().Services

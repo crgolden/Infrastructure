@@ -20,7 +20,7 @@ public static class ConfigurationExtensions
             string RedisPassword,
             string MongoDbUsername,
             string MongoDbPassword,
-            string MonitoringRecipientEmail
+            string AdminEmail
         ) GetInfrastructureSecrets()
         {
             var elasticsearchUsername = configuration.GetRequired<string>("ElasticsearchUsername");
@@ -31,7 +31,7 @@ public static class ConfigurationExtensions
             var redisPassword = configuration.GetRequired<string>("RedisPassword");
             var mongoDbUsername = configuration.GetRequired<string>("MongoDbUsername");
             var mongoDbPassword = configuration.GetRequired<string>("MongoDbPassword");
-            var monitoringRecipientEmail = configuration.GetRequired<string>("MonitoringRecipientEmail");
+            var adminEmail = configuration.GetRequired<string>("AdminEmail");
             return (
                 elasticsearchUsername,
                 elasticsearchPassword,
@@ -41,7 +41,7 @@ public static class ConfigurationExtensions
                 redisPassword,
                 mongoDbUsername,
                 mongoDbPassword,
-                monitoringRecipientEmail
+                adminEmail
             );
         }
 #pragma warning restore SA1009

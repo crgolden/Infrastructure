@@ -100,7 +100,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `RedisPassword` | Redis `AUTH` password |
 | `MongoDbUsername` | MongoDB username |
 | `MongoDbPassword` | MongoDB password |
-| `MonitoringRecipientEmail` | Alert destination email address |
+| `AdminEmail` | Alert destination email address |
 
 ### 2. Run
 
