@@ -1,11 +1,11 @@
 namespace Infrastructure.Tests.Services;
 
+using Azure.Messaging.ServiceBus;
 using Infrastructure.Services;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Models;
 using Moq;
-using Resend;
 
 [Trait("Category", "Unit")]
 public sealed class AlertServiceTests
@@ -13,22 +13,18 @@ public sealed class AlertServiceTests
     [Fact]
     public async Task SendAlertAsync_SendsEmailWithAlertSubject()
     {
-        var resend = new Mock<IResend>();
-        resend.Setup(r => r.EmailSendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<ResendResponse<Guid>>(default!));
-
-        var service = new AlertService(BuildScopeFactory(resend.Object), GetDefaultOptions());
+        var (service, senderMock) = BuildService();
         var result = new ServiceHealthResult("SQL Server", ServiceStatus.Unhealthy, "Connection refused", DateTimeOffset.UtcNow);
 
         await service.SendAlertAsync(result, CancellationToken.None);
 
-        resend.Verify(
-            r => r.EmailSendAsync(
-                It.Is<EmailMessage>(m =>
+        senderMock.Verify(
+            s => s.SendMessageAsync(
+                It.Is<ServiceBusMessage>(m =>
                     m.Subject.Contains("ALERT") &&
                     m.Subject.Contains("SQL Server") &&
-                    m.To.Contains("admin@example.com") &&
-                    m.From.ToString() == "noreply@crgolden.com"),
+                    m.To == "admin@example.com" &&
+                    m.ReplyTo == "noreply@crgolden.com"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -36,53 +32,47 @@ public sealed class AlertServiceTests
     [Fact]
     public async Task SendRecoveryAsync_SendsEmailWithRecoverySubject()
     {
-        var resend = new Mock<IResend>();
-        resend.Setup(r => r.EmailSendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<ResendResponse<Guid>>(default!));
-
-        var service = new AlertService(BuildScopeFactory(resend.Object), GetDefaultOptions());
+        var (service, senderMock) = BuildService();
         var result = new ServiceHealthResult("SQL Server", ServiceStatus.Healthy, "Connected", DateTimeOffset.UtcNow);
 
         await service.SendRecoveryAsync(result, CancellationToken.None);
 
-        resend.Verify(
-            r => r.EmailSendAsync(
-                It.Is<EmailMessage>(m =>
+        senderMock.Verify(
+            s => s.SendMessageAsync(
+                It.Is<ServiceBusMessage>(m =>
                     m.Subject.Contains("RECOVERY") &&
                     m.Subject.Contains("SQL Server") &&
-                    m.To.Contains("admin@example.com") &&
-                    m.From.ToString() == "noreply@crgolden.com"),
+                    m.To == "admin@example.com" &&
+                    m.ReplyTo == "noreply@crgolden.com"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task SendAlertAsync_WhenResendThrows_PropagatesException()
+    public async Task SendAlertAsync_WhenSenderThrows_PropagatesException()
     {
-        var resend = new Mock<IResend>();
-        resend.Setup(r => r.EmailSendAsync(It.IsAny<EmailMessage>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Resend API error"));
+        var (service, senderMock) = BuildService();
+        senderMock
+            .Setup(s => s.SendMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Service Bus error"));
 
-        var service = new AlertService(BuildScopeFactory(resend.Object), GetDefaultOptions());
         var result = new ServiceHealthResult("Redis", ServiceStatus.Unhealthy, "Timeout", DateTimeOffset.UtcNow);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.SendAlertAsync(result, CancellationToken.None));
     }
 
-    private static IServiceScopeFactory BuildScopeFactory(IResend resend)
+    private static (AlertService service, Mock<ServiceBusSender> senderMock) BuildService()
     {
-        var sp = new Mock<IServiceProvider>();
-        sp.Setup(x => x.GetService(typeof(IResend))).Returns(resend);
+        var senderMock = new Mock<ServiceBusSender>();
+        senderMock
+            .Setup(s => s.SendMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var scope = new Mock<IServiceScope>();
-        scope.Setup(x => x.ServiceProvider).Returns(sp.Object);
+        var factoryMock = new Mock<IAzureClientFactory<ServiceBusSender>>();
+        factoryMock.Setup(f => f.CreateClient("email")).Returns(senderMock.Object);
 
-        var factory = new Mock<IServiceScopeFactory>();
-        factory.Setup(x => x.CreateScope()).Returns(scope.Object);
-
-        return factory.Object;
+        var options = Options.Create(new AlertOptions { RecipientEmail = "admin@example.com" });
+        return (new AlertService(factoryMock.Object, options), senderMock);
     }
-
-    private static IOptions<AlertOptions> GetDefaultOptions() => Options.Create(new AlertOptions { RecipientEmail = "admin@example.com" });
 }

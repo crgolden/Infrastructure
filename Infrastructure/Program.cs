@@ -5,7 +5,9 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text.Json.Serialization;
+using Azure.Core;
 using Azure.Identity;
+using Azure.Messaging.ServiceBus;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Security.KeyVault.Secrets;
 using Elastic.Ingest.Elasticsearch;
@@ -24,17 +26,16 @@ using MongoDB.Driver;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using Resend;
 using Serilog;
 using StackExchange.Redis;
 #pragma warning restore SA1200
 
-Serilog.Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
+Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    string elasticsearchUsername, elasticsearchPassword, resendApiToken, adminEmail;
+    string elasticsearchUsername, elasticsearchPassword, adminEmail;
     IConfigurationSection monitoringOptionsSection = builder.Configuration.GetRequiredSection(nameof(MonitoringOptions)),
         serviceEndpointOptionsSection = builder.Configuration.GetRequiredSection(nameof(ServiceEndpointOptions)),
         sqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(SqlConnectionStringBuilder));
@@ -46,7 +47,8 @@ try
     var configurationOptions = new ConfigurationOptions
     {
         Ssl = redisSsl,
-        EndPoints = [redisEndpoint]
+        EndPoints = [redisEndpoint],
+        AbortOnConnectFail = false
     };
     string mongoDatabaseName = builder.Configuration.GetRequired<string>("MongoDatabaseName"),
         mongoServerHost = builder.Configuration.GetRequired<string>("MongoServerHost");
@@ -57,6 +59,11 @@ try
         Server = new MongoServerAddress(mongoServerHost, mongoServerPort),
         UseTls = mongoUseTls
     };
+    var serviceBusSenderFactory = (ServiceBusClientOptions _, TokenCredential _, IServiceProvider sp) =>
+    {
+        var serviceBusClient = sp.GetRequiredService<ServiceBusClient>();
+        return serviceBusClient.CreateSender("email");
+    };
     if (builder.Environment.IsProduction())
     {
         var defaultAzureCredentialOptionsSection = builder.Configuration.GetRequiredSection(nameof(DefaultAzureCredentialOptions));
@@ -66,19 +73,18 @@ try
             dataProtectionKeyIdentifier = builder.Configuration.GetRequired<Uri>("DataProtectionKeyIdentifier"),
             elasticsearchNode = builder.Configuration.GetRequired<Uri>("ElasticsearchNode"),
             keyVaultUrl = builder.Configuration.GetRequired<Uri>("KeyVaultUri");
-        var applicationName = builder.Configuration.GetRequired<string>("WEBSITE_SITE_NAME");
+        string applicationName = builder.Configuration.GetRequired<string>("WEBSITE_SITE_NAME"),
+            serviceBusNamespace = builder.Configuration.GetRequired<string>("ServiceBusNamespace");
         var secretClient = new SecretClient(keyVaultUrl, tokenCredential);
         var secrets = secretClient.GetInfrastructureSecrets();
         elasticsearchUsername = secrets.ElasticsearchUsername.Value;
         elasticsearchPassword = secrets.ElasticsearchPassword.Value;
-        resendApiToken = secrets.ResendApiToken.Value;
         adminEmail = secrets.AdminEmail.Value;
         sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId.Value;
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword.Value;
         configurationOptions.Password = secrets.RedisPassword.Value;
         mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, secrets.MongoDbUsername.Value, secrets.MongoDbPassword.Value);
-        builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options =>
-            options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase));
+        builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options => options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase));
         builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
         {
             openTelemetryLoggerOptions.IncludeFormattedMessage = true;
@@ -108,14 +114,18 @@ try
                 {
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
-            .WithMetrics(meterProviderBuilder => meterProviderBuilder
-                .AddRuntimeInstrumentation())
+            .WithMetrics(meterProviderBuilder => meterProviderBuilder.AddRuntimeInstrumentation())
             .UseAzureMonitor().Services
             .AddDataProtection()
             .SetApplicationName(applicationName)
             .PersistKeysToAzureBlobStorage(blobUri, tokenCredential)
             .ProtectKeysWithAzureKeyVault(dataProtectionKeyIdentifier, tokenCredential).Services
-            .AddAzureClientsCore(true);
+            .AddAzureClients(azureClientFactoryBuilder =>
+            {
+                azureClientFactoryBuilder.UseCredential(tokenCredential);
+                azureClientFactoryBuilder.AddServiceBusClientWithNamespace(serviceBusNamespace);
+                azureClientFactoryBuilder.AddClient(serviceBusSenderFactory).WithName("email");
+            });
     }
     else
     {
@@ -127,7 +137,6 @@ try
         var secrets = builder.Configuration.GetInfrastructureSecrets();
         elasticsearchUsername = secrets.ElasticsearchUsername;
         elasticsearchPassword = secrets.ElasticsearchPassword;
-        resendApiToken = secrets.ResendApiToken;
         adminEmail = secrets.AdminEmail;
         sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId;
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword;
@@ -138,16 +147,18 @@ try
                 .ReadFrom.Configuration(builder.Configuration)
                 .ReadFrom.Services(serviceProvider))
             .AddDataProtection()
-            .UseEphemeralDataProtectionProvider();
+            .UseEphemeralDataProtectionProvider().Services
+            .AddAzureClients(azureClientFactoryBuilder =>
+            {
+                azureClientFactoryBuilder.AddServiceBusClient(secrets.ServiceBusConnectionString);
+                azureClientFactoryBuilder.AddClient(serviceBusSenderFactory).WithName("email");
+            });
     }
 
     builder.Services
         .Configure<MonitoringOptions>(monitoringOptionsSection)
         .Configure<AlertOptions>(alertOptions => alertOptions.RecipientEmail = adminEmail)
         .Configure<ServiceEndpointOptions>(serviceEndpointOptionsSection)
-        .Configure<ResendClientOptions>(resendClientOptions => resendClientOptions.ApiToken = resendApiToken)
-        .AddHttpClient<ResendClient>().Services
-        .AddTransient<IResend, ResendClient>()
         .AddHttpClient<IisHttpHealthCheck>().Services
         .AddHttpClient<IisHttpsHealthCheck>().Services
         .AddHttpClient<ElasticsearchHealthCheck>(httpClient =>
@@ -229,9 +240,9 @@ try
 }
 catch (Exception ex) when (ex is not HostAbortedException)
 {
-    Serilog.Log.Fatal(ex, "Application terminated unexpectedly");
+    Log.Fatal(ex, "Application terminated unexpectedly");
 }
 finally
 {
-    await Serilog.Log.CloseAndFlushAsync();
+    await Log.CloseAndFlushAsync();
 }

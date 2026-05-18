@@ -6,7 +6,9 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
 
+#pragma warning disable SA1601
 public sealed partial class HealthMonitorService : BackgroundService, IHealthMonitorService
+#pragma warning restore SA1601
 {
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
@@ -95,7 +97,7 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
 
             switch (previous)
             {
-                case ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
+                case ServiceStatus.Unknown or ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
                     await _alertService.SendAlertAsync(result, cancellationToken);
                     break;
                 case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:

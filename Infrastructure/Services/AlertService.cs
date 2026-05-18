@@ -1,26 +1,25 @@
 namespace Infrastructure.Services;
 
+using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
 using Models;
-using Resend;
 
 public sealed class AlertService : IAlertService
 {
     private const string From = "noreply@crgolden.com";
-
-    private readonly IResend _resend;
     private readonly string _to;
+    private readonly ServiceBusSender _serviceBusSender;
 
-    public AlertService(IServiceScopeFactory serviceScopeFactory, IOptions<AlertOptions> options)
+    public AlertService(IAzureClientFactory<ServiceBusSender> serviceBusSenderFactory, IOptions<AlertOptions> options)
     {
-        var scope = serviceScopeFactory.CreateScope();
-        _resend = scope.ServiceProvider.GetRequiredService<IResend>();
         if (IsNullOrWhiteSpace(options.Value.RecipientEmail))
         {
-            throw new InvalidOperationException("Invalid 'RecipientEmail'.");
+            throw new InvalidOperationException($"Invalid '{nameof(AlertOptions.RecipientEmail)}'.");
         }
 
         _to = options.Value.RecipientEmail;
+        _serviceBusSender = serviceBusSenderFactory.CreateClient("email");
     }
 
     public async Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
@@ -58,8 +57,12 @@ public sealed class AlertService : IAlertService
         string htmlBody,
         CancellationToken cancellationToken)
     {
-        var message = new EmailMessage { From = From, Subject = subject, HtmlBody = htmlBody };
-        message.To.Add(_to);
-        await _resend.EmailSendAsync(message, cancellationToken);
+        var message = new ServiceBusMessage(htmlBody)
+        {
+            ReplyTo = From,
+            Subject = subject,
+            To = _to
+        };
+        await _serviceBusSender.SendMessageAsync(message, cancellationToken);
     }
 }

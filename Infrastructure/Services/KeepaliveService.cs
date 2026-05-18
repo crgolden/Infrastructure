@@ -1,6 +1,8 @@
 namespace Infrastructure.Services;
 
+#pragma warning disable SA1601
 public sealed partial class KeepaliveService : BackgroundService
+#pragma warning restore SA1601
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(10);
     private readonly HttpClient _httpClient;

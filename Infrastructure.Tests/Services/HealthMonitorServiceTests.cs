@@ -42,6 +42,40 @@ public sealed class HealthMonitorServiceTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_SendsAlertWhenServiceIsUnhealthyOnFirstPoll()
+    {
+        var healthCheckService = new Mock<HealthCheckService>();
+        healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy));
+
+        var hubContext = new Mock<IHubContext<HealthHub>>();
+        var clients = new Mock<IHubClients>();
+        var clientProxy = new Mock<IClientProxy>();
+        hubContext.Setup(h => h.Clients).Returns(clients.Object);
+        clients.Setup(c => c.All).Returns(clientProxy.Object);
+
+        var alertService = new Mock<IAlertService>();
+
+        var svc = new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            GetDefaultOptions(),
+            NullLogger<HealthMonitorService>.Instance);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        _ = svc.StartAsync(cts.Token);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+
+        alertService.Verify(
+            a => a.SendAlertAsync(
+                It.Is<ServiceHealthResult>(r => r.Status == ServiceStatus.Unhealthy),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_SendsAlertWhenServiceTransitionsToUnhealthy()
     {
         var callCount = 0;
