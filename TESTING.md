@@ -39,6 +39,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `KibanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/status` |
 | `ManualsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `MongoDbHealthCheckTests` | `IMongoClient` | `ping` command |
+| `HomeAssistantHealthCheckTests` | `IHttpClientFactory` | `GET /` on `:8123` |
 | `PlexHealthCheckTests` | `IHttpClientFactory` | `GET /identity` |
 | `ProductsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `RedisHealthCheckTests` | `IConnectionMultiplexer` | `PING` command |

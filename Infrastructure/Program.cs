@@ -173,6 +173,7 @@ try
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         }).Services
         .AddHttpClient<PlexHealthCheck>().Services
+        .AddHttpClient<HomeAssistantHealthCheck>().Services
         .AddHttpClient<IdentityHealthCheck>().Services
         .AddHttpClient<ManualsHealthCheck>().Services
         .AddHttpClient<ExperienceHealthCheck>().Services
@@ -188,6 +189,7 @@ try
         .AddCheck<ElasticsearchHealthCheck>("Elasticsearch", tags: ["search"])
         .AddCheck<KibanaHealthCheck>("Kibana", tags: ["analytics"])
         .AddCheck<PlexHealthCheck>("Plex", tags: ["media"])
+        .AddCheck<HomeAssistantHealthCheck>("Home Assistant", tags: ["smart-home"])
         .AddCheck<YawcamHealthCheck>("Yawcam AI", tags: ["surveillance"])
         .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])
         .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
