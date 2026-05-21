@@ -11,10 +11,10 @@ public sealed class RedisHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenPingSucceeds_ReturnsHealthy()
     {
-        var db = new Mock<IDatabase>();
+        var db = new Mock<IDatabase>(MockBehavior.Strict);
         db.Setup(d => d.PingAsync(It.IsAny<CommandFlags>()))
             .ReturnsAsync(TimeSpan.FromMilliseconds(1));
-        var muxer = new Mock<IConnectionMultiplexer>();
+        var muxer = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
 
         var check = new RedisHealthCheck(muxer.Object);
@@ -28,10 +28,10 @@ public sealed class RedisHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenPingThrows_ReturnsUnhealthy()
     {
-        var db = new Mock<IDatabase>();
+        var db = new Mock<IDatabase>(MockBehavior.Strict);
         db.Setup(d => d.PingAsync(It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "refused"));
-        var muxer = new Mock<IConnectionMultiplexer>();
+        var muxer = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
 
         var check = new RedisHealthCheck(muxer.Object);
@@ -45,7 +45,7 @@ public sealed class RedisHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenGetDatabaseThrows_ReturnsUnhealthy()
     {
-        var muxer = new Mock<IConnectionMultiplexer>();
+        var muxer = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
             .Throws(new InvalidOperationException("muxer not connected"));
 

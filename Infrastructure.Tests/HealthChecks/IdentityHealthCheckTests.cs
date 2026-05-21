@@ -62,7 +62,7 @@ public sealed class IdentityHealthCheckTests
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content)
     {
-        var handler = new Mock<HttpMessageHandler>();
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(statusCode) { Content = new StringContent(content) });
@@ -71,7 +71,7 @@ public sealed class IdentityHealthCheckTests
 
     private static HttpClient BuildThrowingClient(Exception ex)
     {
-        var handler = new Mock<HttpMessageHandler>();
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ThrowsAsync(ex);

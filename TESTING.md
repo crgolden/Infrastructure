@@ -2,6 +2,8 @@
 
 The Infrastructure test suite uses xUnit v3 and covers a single tier: **unit tests** that run on every push with no external dependencies.
 
+Unit test coding standards (MockBehavior.Strict, argument verification, SetupSequence, no control-flow in tests, etc.) are in the workspace-level [Unit Test Standards](../TESTING.md#unit-test-standards).
+
 ## Test tier
 
 | Tier | Trait | Project | Requires Azure? | Runs in CI |

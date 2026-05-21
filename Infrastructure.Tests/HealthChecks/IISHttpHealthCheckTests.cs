@@ -49,7 +49,7 @@ public sealed class IISHttpHealthCheckTests
 
     private static HttpClient BuildClient(HttpStatusCode statusCode)
     {
-        var handler = new Mock<HttpMessageHandler>();
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(new HttpResponseMessage(statusCode));
@@ -58,7 +58,7 @@ public sealed class IISHttpHealthCheckTests
 
     private static HttpClient BuildThrowingClient(Exception ex)
     {
-        var handler = new Mock<HttpMessageHandler>();
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handler.Protected()
             .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
             .ThrowsAsync(ex);

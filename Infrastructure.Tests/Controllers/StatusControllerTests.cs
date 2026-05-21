@@ -16,7 +16,7 @@ public sealed class StatusControllerTests
             DateTimeOffset.UtcNow,
             [new ServiceHealthResult("SQL Server", ServiceStatus.Healthy, "Connected", DateTimeOffset.UtcNow)]);
 
-        var service = new Mock<IHealthMonitorService>();
+        var service = new Mock<IHealthMonitorService>(MockBehavior.Strict);
         service.Setup(s => s.LastSnapshot).Returns(snapshot);
 
         var controller = new StatusController(service.Object);
@@ -29,7 +29,7 @@ public sealed class StatusControllerTests
     [Fact]
     public void Get_WhenNoSnapshotYet_Returns503()
     {
-        var service = new Mock<IHealthMonitorService>();
+        var service = new Mock<IHealthMonitorService>(MockBehavior.Strict);
         service.Setup(s => s.LastSnapshot).Returns((HealthSnapshot?)null);
 
         var controller = new StatusController(service.Object);

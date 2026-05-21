@@ -12,14 +12,14 @@ public sealed class MongoDbHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenPingSucceeds_ReturnsHealthy()
     {
-        var db = new Mock<IMongoDatabase>();
+        var db = new Mock<IMongoDatabase>(MockBehavior.Strict);
         db.Setup(d => d.RunCommandAsync(
                 It.IsAny<BsonDocumentCommand<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new BsonDocument("ok", 1));
 
-        var client = new Mock<IMongoClient>();
+        var client = new Mock<IMongoClient>(MockBehavior.Strict);
         client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
 
         var check = new MongoDbHealthCheck(client.Object);
@@ -33,14 +33,14 @@ public sealed class MongoDbHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenPingThrows_ReturnsUnhealthy()
     {
-        var db = new Mock<IMongoDatabase>();
+        var db = new Mock<IMongoDatabase>(MockBehavior.Strict);
         db.Setup(d => d.RunCommandAsync(
                 It.IsAny<BsonDocumentCommand<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new MongoConnectionException(new MongoDB.Driver.Core.Connections.ConnectionId(new MongoDB.Driver.Core.Servers.ServerId(new MongoDB.Driver.Core.Clusters.ClusterId(), new System.Net.DnsEndPoint("localhost", 27017))), "timeout"));
 
-        var client = new Mock<IMongoClient>();
+        var client = new Mock<IMongoClient>(MockBehavior.Strict);
         client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
 
         var check = new MongoDbHealthCheck(client.Object);
@@ -54,7 +54,7 @@ public sealed class MongoDbHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenGetDatabaseThrows_ReturnsUnhealthy()
     {
-        var client = new Mock<IMongoClient>();
+        var client = new Mock<IMongoClient>(MockBehavior.Strict);
         client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>()))
             .Throws(new InvalidOperationException("not connected"));
 
