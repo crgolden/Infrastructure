@@ -35,7 +35,7 @@ Infrastructure is the **observability surface** for a five-app system. It polls 
 | [Experience](https://github.com/crgolden/Experience) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 | [Products](https://github.com/crgolden/Products) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 
-Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert email is sent via Resend. A recovery email is sent when the service returns to `Healthy`.
+Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert message is published to Azure Service Bus. A recovery message is sent when the service returns to `Healthy`.
 
 ## Tech Stack
 
@@ -43,7 +43,7 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 |---|---|
 | Framework | ASP.NET Core 10 |
 | Real-time dashboard | SignalR |
-| Email alerts | Resend |
+| Email alerts | Azure Service Bus |
 | Observability | Azure Monitor, OpenTelemetry, Serilog, Elasticsearch |
 | Hosting | Azure App Service |
 | Secrets | Azure Key Vault |
@@ -56,7 +56,7 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 | .NET 10 SDK | |
 | Azure Key Vault | Required in production only; non-production uses User Secrets |
 | Azure Key Vault | With the secrets listed below |
-| Resend account | `noreply@crgolden.com` verified as a sender domain |
+| Azure Service Bus namespace | With an `email` queue for outbound alert messages |
 
 ## Getting Started
 
@@ -92,7 +92,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 
 | Secret name | Description |
 |---|---|
-| `ResendApiToken` | Resend API token for email alerts |
+| `ServiceBusNamespace` | Azure Service Bus fully-qualified namespace (production) |
 | `ElasticsearchUsername` | Elasticsearch username (Serilog sink) |
 | `ElasticsearchPassword` | Elasticsearch password (Serilog sink) |
 | `SqlServerUserId` | SQL Server login |
@@ -118,7 +118,7 @@ dotnet run
 ## Project Structure
 
 ```
-Infrastructure/        # ASP.NET Core 10 — health polling, SignalR dashboard, Resend email alerts
+Infrastructure/        # ASP.NET Core 10 — health polling, SignalR dashboard, Azure Service Bus email alerts
 Infrastructure.Tests/  # xUnit v3 unit tests (Moq)
 ```
 

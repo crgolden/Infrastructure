@@ -1,5 +1,7 @@
 namespace Infrastructure.Services;
 
+using OpenTelemetry;
+
 #pragma warning disable SA1601
 public sealed partial class KeepaliveService : BackgroundService
 #pragma warning restore SA1601
@@ -30,7 +32,11 @@ public sealed partial class KeepaliveService : BackgroundService
             await Task.Delay(Interval, stoppingToken);
             try
             {
-                await _httpClient.GetAsync(_pingUri, stoppingToken);
+                // Suppress the keepalive self-ping dependency span — internal warmup noise, not actionable.
+                using (SuppressInstrumentationScope.Begin())
+                {
+                    await _httpClient.GetAsync(_pingUri, stoppingToken);
+                }
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {

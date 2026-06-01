@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
+using OpenTelemetry;
 
 #pragma warning disable SA1601
 public sealed partial class HealthMonitorService : BackgroundService, IHealthMonitorService
@@ -73,7 +74,13 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
 
     private async Task PollAsync(CancellationToken cancellationToken)
     {
-        var report = await _healthCheckService.CheckHealthAsync(cancellationToken);
+        // Suppress the per-poll probe spans (HTTP/SQL calls to every monitored service) — pure App Insights noise; transitions are surfaced via AlertService + SignalR.
+        HealthReport report;
+        using (SuppressInstrumentationScope.Begin())
+        {
+            report = await _healthCheckService.CheckHealthAsync(cancellationToken);
+        }
+
         var now = DateTimeOffset.UtcNow;
         var results = report.Entries.Select(entry => new ServiceHealthResult(
             Name: entry.Key,

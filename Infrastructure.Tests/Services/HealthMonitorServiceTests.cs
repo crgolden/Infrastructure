@@ -15,17 +15,19 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_StoresSnapshotAfterFirstPoll()
     {
-        var healthCheckService = new Mock<HealthCheckService>();
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy));
 
-        var hubContext = new Mock<IHubContext<HealthHub>>();
-        var clients = new Mock<IHubClients>();
-        var clientProxy = new Mock<IClientProxy>();
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
         clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var alertService = new Mock<IAlertService>();
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         var svc = new HealthMonitorService(
             healthCheckService.Object,
@@ -44,17 +46,21 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_SendsAlertWhenServiceIsUnhealthyOnFirstPoll()
     {
-        var healthCheckService = new Mock<HealthCheckService>();
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Unhealthy));
 
-        var hubContext = new Mock<IHubContext<HealthHub>>();
-        var clients = new Mock<IHubClients>();
-        var clientProxy = new Mock<IClientProxy>();
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
         clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var alertService = new Mock<IAlertService>();
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+        alertService.Setup(a => a.SendAlertAsync(It.IsAny<ServiceHealthResult>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
             healthCheckService.Object,
@@ -78,24 +84,26 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_SendsAlertWhenServiceTransitionsToUnhealthy()
     {
-        var callCount = 0;
-        var healthCheckService = new Mock<HealthCheckService>();
-        healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                callCount++;
-                return callCount == 1
-                    ? BuildReport(HealthStatus.Healthy)
-                    : BuildReport(HealthStatus.Unhealthy);
-            });
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        healthCheckService
+            .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy));
 
-        var hubContext = new Mock<IHubContext<HealthHub>>();
-        var clients = new Mock<IHubClients>();
-        var clientProxy = new Mock<IClientProxy>();
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
         clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var alertService = new Mock<IAlertService>();
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+        alertService.Setup(a => a.SendAlertAsync(It.IsAny<ServiceHealthResult>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
             healthCheckService.Object,
@@ -119,27 +127,29 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_SendsRecoveryWhenServiceReturnsToHealthy()
     {
-        var callCount = 0;
-        var healthCheckService = new Mock<HealthCheckService>();
-        healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                callCount++;
-                return callCount switch
-                {
-                    1 => BuildReport(HealthStatus.Healthy),
-                    2 => BuildReport(HealthStatus.Unhealthy),
-                    _ => BuildReport(HealthStatus.Healthy),
-                };
-            });
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        healthCheckService
+            .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy));
 
-        var hubContext = new Mock<IHubContext<HealthHub>>();
-        var clients = new Mock<IHubClients>();
-        var clientProxy = new Mock<IClientProxy>();
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
         clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var alertService = new Mock<IAlertService>();
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+        alertService.Setup(a => a.SendAlertAsync(It.IsAny<ServiceHealthResult>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        alertService.Setup(a => a.SendRecoveryAsync(It.IsAny<ServiceHealthResult>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
             healthCheckService.Object,
@@ -163,17 +173,19 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_PushesSnapshotToHub()
     {
-        var healthCheckService = new Mock<HealthCheckService>();
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy));
 
-        var hubContext = new Mock<IHubContext<HealthHub>>();
-        var clients = new Mock<IHubClients>();
-        var clientProxy = new Mock<IClientProxy>();
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
         hubContext.Setup(h => h.Clients).Returns(clients.Object);
         clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
-        var alertService = new Mock<IAlertService>();
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         var svc = new HealthMonitorService(
             healthCheckService.Object,

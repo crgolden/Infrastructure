@@ -9,13 +9,13 @@ using Moq;
 using Moq.Protected;
 
 [Trait("Category", "Unit")]
-public sealed class IISHttpsHealthCheckTests
+public sealed class UptimeKumaHealthCheckTests
 {
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccess_ReturnsHealthy()
     {
-        var check = new IisHttpsHealthCheck(BuildClient(HttpStatusCode.OK), GetDefaultOptions());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("IIS HTTPS", check, null, null) };
+        var check = new UptimeKumaHealthCheck(BuildClient(HttpStatusCode.OK), GetDefaultOptions());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Uptime Kuma", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -25,8 +25,8 @@ public sealed class IISHttpsHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
-        var check = new IisHttpsHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable), GetDefaultOptions());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("IIS HTTPS", check, null, null) };
+        var check = new UptimeKumaHealthCheck(BuildClient(HttpStatusCode.InternalServerError), GetDefaultOptions());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Uptime Kuma", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -36,16 +36,16 @@ public sealed class IISHttpsHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new IisHttpsHealthCheck(BuildThrowingClient(new HttpRequestException("connection refused")), GetDefaultOptions());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("IIS HTTPS", check, null, null) };
+        var check = new UptimeKumaHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultOptions());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Uptime Kuma", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("connection refused", result.Description);
+        Assert.Equal("timeout", result.Description);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { IisHttps = new Uri("https://localhost:443") });
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { UptimeKuma = new Uri("https://deeprog.servehttp.com:3001") });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode)
     {

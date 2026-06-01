@@ -21,10 +21,11 @@ public sealed class AlertServiceTests
         senderMock.Verify(
             s => s.SendMessageAsync(
                 It.Is<ServiceBusMessage>(m =>
-                    m.Subject.Contains("ALERT") &&
-                    m.Subject.Contains("SQL Server") &&
+                    m.Subject == "[ALERT] SQL Server is Unhealthy" &&
                     m.To == "admin@example.com" &&
-                    m.ReplyTo == "noreply@crgolden.com"),
+                    m.ReplyTo == "noreply@crgolden.com" &&
+                    m.Body.ToString().Contains("SQL Server") &&
+                    m.Body.ToString().Contains("Connection refused")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -40,10 +41,11 @@ public sealed class AlertServiceTests
         senderMock.Verify(
             s => s.SendMessageAsync(
                 It.Is<ServiceBusMessage>(m =>
-                    m.Subject.Contains("RECOVERY") &&
-                    m.Subject.Contains("SQL Server") &&
+                    m.Subject == "[RECOVERY] SQL Server is Healthy" &&
                     m.To == "admin@example.com" &&
-                    m.ReplyTo == "noreply@crgolden.com"),
+                    m.ReplyTo == "noreply@crgolden.com" &&
+                    m.Body.ToString().Contains("SQL Server") &&
+                    m.Body.ToString().Contains("Connected")),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -64,12 +66,12 @@ public sealed class AlertServiceTests
 
     private static (AlertService service, Mock<ServiceBusSender> senderMock) BuildService()
     {
-        var senderMock = new Mock<ServiceBusSender>();
+        var senderMock = new Mock<ServiceBusSender>(MockBehavior.Strict);
         senderMock
             .Setup(s => s.SendMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var factoryMock = new Mock<IAzureClientFactory<ServiceBusSender>>();
+        var factoryMock = new Mock<IAzureClientFactory<ServiceBusSender>>(MockBehavior.Strict);
         factoryMock.Setup(f => f.CreateClient("email")).Returns(senderMock.Object);
 
         var options = Options.Create(new AlertOptions { RecipientEmail = "admin@example.com" });

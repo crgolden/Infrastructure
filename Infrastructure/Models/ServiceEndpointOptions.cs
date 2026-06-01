@@ -12,6 +12,10 @@ public sealed class ServiceEndpointOptions
 
     public Uri? Plex { get; set; }
 
+    public Uri? HomeAssistant { get; set; }
+
+    public Uri? UptimeKuma { get; set; }
+
     public string? YawcamHost { get; set; }
 
     public int? YawcamPort { get; set; }
