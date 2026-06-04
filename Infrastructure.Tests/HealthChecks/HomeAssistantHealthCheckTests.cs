@@ -45,7 +45,10 @@ public sealed class HomeAssistantHealthCheckTests
         Assert.Equal("timeout", result.Description);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { HomeAssistant = new Uri("https://deeprog.servehttp.com:8123") });
+    // URL is never contacted — the HttpMessageHandler is mocked to return a canned
+    // response for any request. Uses the reserved .test TLD (RFC 6761) so the fixture
+    // is permanently decoupled from real DNS/hostnames.
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { HomeAssistant = new Uri("https://home-assistant.test:8123") });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode)
     {
