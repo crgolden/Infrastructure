@@ -159,7 +159,6 @@ try
         .Configure<MonitoringOptions>(monitoringOptionsSection)
         .Configure<AlertOptions>(alertOptions => alertOptions.RecipientEmail = adminEmail)
         .Configure<ServiceEndpointOptions>(serviceEndpointOptionsSection)
-        .AddHttpClient<IisHttpHealthCheck>().Services
         .AddHttpClient<IisHttpsHealthCheck>().Services
         .AddHttpClient<ElasticsearchHealthCheck>(httpClient =>
         {
@@ -185,7 +184,6 @@ try
         .AddTransient<Func<TcpClient>>(_ => () => new TcpClient())
         .AddHealthChecks()
         .AddCheck<IisHttpsHealthCheck>("IIS HTTPS", tags: ["iis"])
-        .AddCheck<IisHttpHealthCheck>("IIS HTTP (CertifyTheWeb)", tags: ["iis"])
         .AddCheck<SqlServerHealthCheck>("SQL Server", tags: ["database"])
         .AddCheck<ElasticsearchHealthCheck>("Elasticsearch", tags: ["search"])
         .AddCheck<KibanaHealthCheck>("Kibana", tags: ["analytics"])

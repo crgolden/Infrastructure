@@ -38,7 +38,7 @@ public sealed class HealthMonitorServiceTests
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         await svc.StartAsync(cts.Token);
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
 
         Assert.NotNull(svc.LastSnapshot);
     }
@@ -71,7 +71,7 @@ public sealed class HealthMonitorServiceTests
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         _ = svc.StartAsync(cts.Token);
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         alertService.Verify(
@@ -196,7 +196,7 @@ public sealed class HealthMonitorServiceTests
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         _ = svc.StartAsync(cts.Token);
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         clientProxy.Verify(

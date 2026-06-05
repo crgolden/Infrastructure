@@ -2,8 +2,6 @@ namespace Infrastructure.Models;
 
 public sealed class ServiceEndpointOptions
 {
-    public Uri? IisHttp { get; set; }
-
     public Uri? IisHttps { get; set; }
 
     public Uri? Elasticsearch { get; set; }

@@ -74,7 +74,6 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `DataProtectionKeyIdentifier` | Azure Key Vault key URI for Data Protection |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Monitor connection string |
 | `AlertOptions:RecipientEmail` | Email address to receive health alerts |
-| `ServiceEndpoints:IisHttp` | URL for IIS HTTP check |
 | `ServiceEndpoints:IisHttps` | URL for IIS HTTPS check |
 | `ServiceEndpoints:Elasticsearch` | URL for Elasticsearch health check |
 | `ServiceEndpoints:Kibana` | URL for Kibana status check |
