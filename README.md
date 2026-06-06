@@ -28,6 +28,7 @@ Infrastructure is the **observability surface** for a five-app system. It polls 
 | Kibana | 5601 | HTTP GET `/api/status` |
 | Plex Media Server | 32400 | HTTP GET `/identity` |
 | Yawcam AI | 5995 | TCP connect |
+| WMSvc | 8172 | TCP connect |
 | Redis | 6379 | `PING` via `IConnectionMultiplexer` |
 | MongoDB | 27017 | `ping` command via `IMongoClient` |
 | [Identity](https://github.com/crgolden/Identity) | 443 | HTTP GET `/health`, expects `200 Healthy` |
@@ -74,14 +75,14 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `DataProtectionKeyIdentifier` | Azure Key Vault key URI for Data Protection |
 | `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Monitor connection string |
 | `AlertOptions:RecipientEmail` | Email address to receive health alerts |
-| `ServiceEndpoints:IisHttps` | URL for IIS HTTPS check |
-| `ServiceEndpoints:Elasticsearch` | URL for Elasticsearch health check |
-| `ServiceEndpoints:Kibana` | URL for Kibana status check |
-| `ServiceEndpoints:Plex` | URL for Plex identity check |
-| `ServiceEndpoints:YawcamHost` | Hostname for Yawcam TCP check |
-| `ServiceEndpoints:YawcamPort` | Port for Yawcam TCP check (default: 5995) |
-| `ServiceEndpoints:WmsvcHost` | Hostname for WMSvc TCP check |
-| `ServiceEndpoints:WmsvcPort` | Port for WMSvc TCP check (default: 8172) |
+| `ServiceEndpointOptions:IisHttps` | URL for IIS HTTPS check |
+| `ServiceEndpointOptions:Elasticsearch` | URL for Elasticsearch health check |
+| `ServiceEndpointOptions:Kibana` | URL for Kibana status check |
+| `ServiceEndpointOptions:Plex` | URL for Plex identity check |
+| `ServiceEndpointOptions:YawcamHost` | Hostname for Yawcam TCP check |
+| `ServiceEndpointOptions:YawcamPort` | Port for Yawcam TCP check (default: 5995) |
+| `ServiceEndpointOptions:WmsvcHost` | Hostname for WMSvc TCP check |
+| `ServiceEndpointOptions:WmsvcPort` | Port for WMSvc TCP check (default: 8172) |
 | `SqlConnectionStringBuilder:DataSource` | SQL Server host |
 | `SqlConnectionStringBuilder:InitialCatalog` | Database name |
 | `RedisHost` | Redis hostname |

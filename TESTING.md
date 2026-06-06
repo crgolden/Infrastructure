@@ -45,6 +45,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `RedisHealthCheckTests` | `IConnectionMultiplexer` | `PING` command |
 | `SqlServerHealthCheckTests` | `Func<SqlConnection>` | `SELECT 1` |
 | `YawcamHealthCheckTests` | `Func<TcpClient>` | TCP connect `:5995` |
+| `WMSvcHealthCheckTests` | `Func<TcpClient>` | TCP connect `:8172` |
 
 ### `Hubs/`
 
