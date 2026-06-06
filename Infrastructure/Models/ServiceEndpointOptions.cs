@@ -17,4 +17,8 @@ public sealed class ServiceEndpointOptions
     public string? YawcamHost { get; set; }
 
     public int? YawcamPort { get; set; }
+
+    public string? WmsvcHost { get; set; }
+
+    public int? WmsvcPort { get; set; }
 }

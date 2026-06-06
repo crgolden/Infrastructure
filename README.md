@@ -80,6 +80,8 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `ServiceEndpoints:Plex` | URL for Plex identity check |
 | `ServiceEndpoints:YawcamHost` | Hostname for Yawcam TCP check |
 | `ServiceEndpoints:YawcamPort` | Port for Yawcam TCP check (default: 5995) |
+| `ServiceEndpoints:WmsvcHost` | Hostname for WMSvc TCP check |
+| `ServiceEndpoints:WmsvcPort` | Port for WMSvc TCP check (default: 8172) |
 | `SqlConnectionStringBuilder:DataSource` | SQL Server host |
 | `SqlConnectionStringBuilder:InitialCatalog` | Database name |
 | `RedisHost` | Redis hostname |
