@@ -16,7 +16,9 @@ public static class SecretClientExtensions
             KeyVaultSecret RedisPassword,
             KeyVaultSecret MongoDbUsername,
             KeyVaultSecret MongoDbPassword,
-            KeyVaultSecret AdminEmail
+            KeyVaultSecret AdminEmail,
+            KeyVaultSecret InfrastructureClientId,
+            KeyVaultSecret InfrastructureClientSecret
         ) GetInfrastructureSecrets()
         {
             var elasticsearchUsername = secretClient.GetSecret("ElasticsearchUsername");
@@ -28,6 +30,8 @@ public static class SecretClientExtensions
             var mongoDbUsername = secretClient.GetSecret("MongoDbUsername");
             var mongoDbPassword = secretClient.GetSecret("MongoDbPassword");
             var adminEmail = secretClient.GetSecret("AdminEmail");
+            var infrastructureClientId = secretClient.GetSecret("InfrastructureClientId");
+            var infrastructureClientSecret = secretClient.GetSecret("InfrastructureClientSecret");
             return (
                 elasticsearchUsername.Value,
                 elasticsearchPassword.Value,
@@ -37,7 +41,9 @@ public static class SecretClientExtensions
                 redisPassword.Value,
                 mongoDbUsername.Value,
                 mongoDbPassword.Value,
-                adminEmail.Value
+                adminEmail.Value,
+                infrastructureClientId.Value,
+                infrastructureClientSecret.Value
             );
         }
 #pragma warning restore SA1009

@@ -21,7 +21,9 @@ public static class ConfigurationExtensions
             string MongoDbUsername,
             string MongoDbPassword,
             string AdminEmail,
-            string ServiceBusConnectionString
+            string ServiceBusConnectionString,
+            string InfrastructureClientId,
+            string InfrastructureClientSecret
         ) GetInfrastructureSecrets()
         {
             var elasticsearchUsername = configuration.GetRequired<string>("ElasticsearchUsername");
@@ -34,6 +36,8 @@ public static class ConfigurationExtensions
             var mongoDbPassword = configuration.GetRequired<string>("MongoDbPassword");
             var adminEmail = configuration.GetRequired<string>("AdminEmail");
             var serviceBusConnectionString = configuration.GetRequired<string>("ServiceBusConnectionString");
+            var infrastructureClientId = configuration.GetRequired<string>("InfrastructureClientId");
+            var infrastructureClientSecret = configuration.GetRequired<string>("InfrastructureClientSecret");
             return (
                 elasticsearchUsername,
                 elasticsearchPassword,
@@ -44,7 +48,9 @@ public static class ConfigurationExtensions
                 mongoDbUsername,
                 mongoDbPassword,
                 adminEmail,
-                serviceBusConnectionString
+                serviceBusConnectionString,
+                infrastructureClientId,
+                infrastructureClientSecret
             );
         }
 #pragma warning restore SA1009

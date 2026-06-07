@@ -1,9 +1,11 @@
 namespace Infrastructure.Controllers;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Models;
 using Services;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public sealed class StatusController : ControllerBase

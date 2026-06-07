@@ -51,7 +51,13 @@ One test class per health check. Each check accepts its external dependency via 
 
 | Class | What it tests |
 |-------|---------------|
-| `HealthHubTests` | `HealthHub` — SignalR hub method that broadcasts `HealthSnapshot` to all clients |
+| `HealthHubTests` | `HealthHub` — is a SignalR `Hub` (no methods yet) |
+
+### `Pages/`
+
+| Class | What it tests |
+|-------|---------------|
+| `LogoutTests` | `LogoutModel.OnPost` — returns `SignOutResult` with both Cookie and OIDC schemes, redirect URI `"/"` |
 
 ### `Services/`
 

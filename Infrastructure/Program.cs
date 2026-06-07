@@ -19,7 +19,12 @@ using Infrastructure.HealthChecks;
 using Infrastructure.Hubs;
 using Infrastructure.Models;
 using Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
 using MongoDB.Driver;
@@ -35,7 +40,8 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    string elasticsearchUsername, elasticsearchPassword, adminEmail;
+    string elasticsearchUsername, elasticsearchPassword, adminEmail, infrastructureClientId, infrastructureClientSecret;
+    Uri oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
     IConfigurationSection monitoringOptionsSection = builder.Configuration.GetRequiredSection(nameof(MonitoringOptions)),
         serviceEndpointOptionsSection = builder.Configuration.GetRequiredSection(nameof(ServiceEndpointOptions)),
         sqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(SqlConnectionStringBuilder));
@@ -80,6 +86,8 @@ try
         elasticsearchUsername = secrets.ElasticsearchUsername.Value;
         elasticsearchPassword = secrets.ElasticsearchPassword.Value;
         adminEmail = secrets.AdminEmail.Value;
+        infrastructureClientId = secrets.InfrastructureClientId.Value;
+        infrastructureClientSecret = secrets.InfrastructureClientSecret.Value;
         sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId.Value;
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword.Value;
         configurationOptions.Password = secrets.RedisPassword.Value;
@@ -138,6 +146,8 @@ try
         elasticsearchUsername = secrets.ElasticsearchUsername;
         elasticsearchPassword = secrets.ElasticsearchPassword;
         adminEmail = secrets.AdminEmail;
+        infrastructureClientId = secrets.InfrastructureClientId;
+        infrastructureClientSecret = secrets.InfrastructureClientSecret;
         sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId;
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword;
         configurationOptions.Password = secrets.RedisPassword;
@@ -207,7 +217,58 @@ try
         .AddHttpClient<KeepaliveService>().Services
         .AddHostedService<KeepaliveService>()
         .AddControllers().Services
-        .AddRazorPages();
+        .AddRazorPages()
+        .Services
+        .AddAuthentication(options =>
+        {
+            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+            options.DefaultSignOutScheme = OpenIdConnectDefaults.AuthenticationScheme;
+        })
+        .AddCookie()
+        .AddOpenIdConnect(options =>
+        {
+            options.Authority = oidcAuthority.ToString();
+            options.ClientId = infrastructureClientId;
+            options.ClientSecret = infrastructureClientSecret;
+            options.ResponseType = "code";
+            options.SaveTokens = false;
+            options.GetClaimsFromUserInfoEndpoint = true;
+            options.MapInboundClaims = false;
+            if (!builder.Environment.IsProduction())
+            {
+                options.Events = new OpenIdConnectEvents
+                {
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        var server = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
+                        var addresses = server.Features.GetRequiredFeature<IServerAddressesFeature>().Addresses;
+                        var address = addresses.FirstOrDefault(a => a.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                            ?? addresses.FirstOrDefault();
+                        if (!IsNullOrWhiteSpace(address))
+                        {
+                            context.ProtocolMessage.RedirectUri = address.TrimEnd('/') + options.CallbackPath;
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    OnRedirectToIdentityProviderForSignOut = context =>
+                    {
+                        var server = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
+                        var addresses = server.Features.GetRequiredFeature<IServerAddressesFeature>().Addresses;
+                        var address = addresses.FirstOrDefault(a => a.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                            ?? addresses.FirstOrDefault();
+                        if (!IsNullOrWhiteSpace(address))
+                        {
+                            context.ProtocolMessage.PostLogoutRedirectUri = address.TrimEnd('/') + options.SignedOutCallbackPath;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+            }
+        }).Services
+        .AddAuthorization();
 
     var app = builder.Build();
     app.UseSerilogRequestLogging(options =>
@@ -233,6 +294,8 @@ try
     }
 
     app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
     app.MapHealthChecks("/health").DisableHttpMetrics();
     app.MapGet("/ping", () => Results.Ok()).DisableHttpMetrics();
     app.MapStaticAssets();
