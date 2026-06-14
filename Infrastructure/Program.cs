@@ -5,9 +5,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text.Json.Serialization;
-using Azure.Core;
 using Azure.Identity;
-using Azure.Messaging.ServiceBus;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Azure.Security.KeyVault.Secrets;
 using Elastic.Ingest.Elasticsearch;
@@ -19,7 +17,6 @@ using Infrastructure.HealthChecks;
 using Infrastructure.Hubs;
 using Infrastructure.Models;
 using Infrastructure.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
@@ -41,7 +38,7 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
     string elasticsearchUsername, elasticsearchPassword, adminEmail, infrastructureClientId, infrastructureClientSecret;
-    Uri oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
+    var oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
     IConfigurationSection monitoringOptionsSection = builder.Configuration.GetRequiredSection(nameof(MonitoringOptions)),
         serviceEndpointOptionsSection = builder.Configuration.GetRequiredSection(nameof(ServiceEndpointOptions)),
         sqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(SqlConnectionStringBuilder));
@@ -64,11 +61,6 @@ try
     {
         Server = new MongoServerAddress(mongoServerHost, mongoServerPort),
         UseTls = mongoUseTls
-    };
-    var serviceBusSenderFactory = (ServiceBusClientOptions _, TokenCredential _, IServiceProvider sp) =>
-    {
-        var serviceBusClient = sp.GetRequiredService<ServiceBusClient>();
-        return serviceBusClient.CreateSender("email");
     };
     if (builder.Environment.IsProduction())
     {
@@ -122,7 +114,10 @@ try
                 {
                     ["deployment.environment"] = builder.Environment.EnvironmentName.ToLowerInvariant()
                 }))
-            .WithMetrics(meterProviderBuilder => meterProviderBuilder.AddRuntimeInstrumentation())
+            .WithMetrics(meterProviderBuilder => meterProviderBuilder
+                .AddRuntimeInstrumentation()
+                .AddView(instrument =>
+                    instrument.Meter.Name == "System.Net.Http" ? MetricStreamConfiguration.Drop : null))
             .UseAzureMonitor().Services
             .AddDataProtection()
             .SetApplicationName(applicationName)
@@ -131,8 +126,7 @@ try
             .AddAzureClients(azureClientFactoryBuilder =>
             {
                 azureClientFactoryBuilder.UseCredential(tokenCredential);
-                azureClientFactoryBuilder.AddServiceBusClientWithNamespace(serviceBusNamespace);
-                azureClientFactoryBuilder.AddClient(serviceBusSenderFactory).WithName("email");
+                azureClientFactoryBuilder.AddServiceBusClientWithNamespace(serviceBusNamespace).WithName("crgolden");
             });
     }
     else
@@ -160,8 +154,7 @@ try
             .UseEphemeralDataProtectionProvider().Services
             .AddAzureClients(azureClientFactoryBuilder =>
             {
-                azureClientFactoryBuilder.AddServiceBusClient(secrets.ServiceBusConnectionString);
-                azureClientFactoryBuilder.AddClient(serviceBusSenderFactory).WithName("email");
+                azureClientFactoryBuilder.AddServiceBusClient(secrets.ServiceBusConnectionString).WithName("crgolden");
             });
     }
 

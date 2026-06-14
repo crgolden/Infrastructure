@@ -9,9 +9,9 @@ public sealed class AlertService : IAlertService
 {
     private const string From = "noreply@crgolden.com";
     private readonly string _to;
-    private readonly ServiceBusSender _serviceBusSender;
+    private readonly ServiceBusClient _serviceBusClient;
 
-    public AlertService(IAzureClientFactory<ServiceBusSender> serviceBusSenderFactory, IOptions<AlertOptions> options)
+    public AlertService(IAzureClientFactory<ServiceBusClient> serviceBusClientFactory, IOptions<AlertOptions> options)
     {
         if (IsNullOrWhiteSpace(options.Value.RecipientEmail))
         {
@@ -19,7 +19,7 @@ public sealed class AlertService : IAlertService
         }
 
         _to = options.Value.RecipientEmail;
-        _serviceBusSender = serviceBusSenderFactory.CreateClient("email");
+        _serviceBusClient = serviceBusClientFactory.CreateClient("crgolden");
     }
 
     public async Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
@@ -63,6 +63,7 @@ public sealed class AlertService : IAlertService
             Subject = subject,
             To = _to
         };
-        await _serviceBusSender.SendMessageAsync(message, cancellationToken);
+        var serviceBusSender = _serviceBusClient.CreateSender("email");
+        await serviceBusSender.SendMessageAsync(message, cancellationToken);
     }
 }

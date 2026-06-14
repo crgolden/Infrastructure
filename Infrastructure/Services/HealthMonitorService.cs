@@ -7,9 +7,7 @@ using Microsoft.Extensions.Options;
 using Models;
 using OpenTelemetry;
 
-#pragma warning disable SA1601
-public sealed partial class HealthMonitorService : BackgroundService, IHealthMonitorService
-#pragma warning restore SA1601
+public sealed class HealthMonitorService : BackgroundService, IHealthMonitorService
 {
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
@@ -17,7 +15,6 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
     private readonly IHubContext<HealthHub> _hubContext;
     private readonly IAlertService _alertService;
     private readonly int _intervalSeconds;
-    private readonly ILogger<HealthMonitorService> _logger;
 
     private HealthSnapshot? _lastSnapshot;
 
@@ -25,8 +22,7 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
         HealthCheckService healthCheckService,
         IHubContext<HealthHub> hubContext,
         IAlertService alertService,
-        IOptions<MonitoringOptions> options,
-        ILogger<HealthMonitorService> logger)
+        IOptions<MonitoringOptions> options)
     {
         _healthCheckService = healthCheckService;
         _hubContext = hubContext;
@@ -37,7 +33,6 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
         }
 
         _intervalSeconds = options.Value.IntervalSeconds.Value;
-        _logger = logger;
     }
 
     public HealthSnapshot? LastSnapshot
@@ -53,16 +48,12 @@ public sealed partial class HealthMonitorService : BackgroundService, IHealthMon
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        LogMonitorStarted(_logger, _intervalSeconds);
         while (!stoppingToken.IsCancellationRequested)
         {
             await PollAsync(stoppingToken);
             await Task.Delay(TimeSpan.FromSeconds(_intervalSeconds), stoppingToken);
         }
     }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Health monitor started. Polling every {Seconds}s.")]
-    private static partial void LogMonitorStarted(ILogger logger, int seconds);
 
     private static ServiceStatus MapStatus(HealthStatus status) => status switch
     {

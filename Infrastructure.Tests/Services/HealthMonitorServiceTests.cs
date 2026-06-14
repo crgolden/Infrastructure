@@ -4,7 +4,6 @@ using Infrastructure.Hubs;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Models;
 using Moq;
@@ -33,8 +32,7 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions(),
-            NullLogger<HealthMonitorService>.Instance);
+            GetDefaultOptions());
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         await svc.StartAsync(cts.Token);
@@ -66,8 +64,7 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions(),
-            NullLogger<HealthMonitorService>.Instance);
+            GetDefaultOptions());
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         _ = svc.StartAsync(cts.Token);
@@ -109,8 +106,7 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions(),
-            NullLogger<HealthMonitorService>.Instance);
+            GetDefaultOptions());
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         _ = svc.StartAsync(cts.Token);
@@ -155,8 +151,7 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions(),
-            NullLogger<HealthMonitorService>.Instance);
+            GetDefaultOptions());
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
         _ = svc.StartAsync(cts.Token);
@@ -191,8 +186,7 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions(),
-            NullLogger<HealthMonitorService>.Instance);
+            GetDefaultOptions());
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
         _ = svc.StartAsync(cts.Token);

@@ -1,22 +1,19 @@
 namespace Infrastructure.Services;
 
+using System.Diagnostics;
 using OpenTelemetry;
 
-#pragma warning disable SA1601
-public sealed partial class KeepaliveService : BackgroundService
-#pragma warning restore SA1601
+public sealed class KeepaliveService : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromMinutes(10);
     private readonly HttpClient _httpClient;
     private readonly Uri? _pingUri;
-    private readonly ILogger<KeepaliveService> _logger;
 
-    public KeepaliveService(HttpClient httpClient, IConfiguration configuration, ILogger<KeepaliveService> logger)
+    public KeepaliveService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
         var hostname = configuration["WEBSITE_HOSTNAME"];
         _pingUri = IsNullOrEmpty(hostname) ? null : new Uri($"https://{hostname}/ping");
-        _logger = logger;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -26,7 +23,6 @@ public sealed partial class KeepaliveService : BackgroundService
             return;
         }
 
-        LogKeepaliveStarted(_logger, _pingUri);
         while (!stoppingToken.IsCancellationRequested)
         {
             await Task.Delay(Interval, stoppingToken);
@@ -40,14 +36,8 @@ public sealed partial class KeepaliveService : BackgroundService
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                LogKeepaliveFailed(_logger, ex);
+                Activity.Current?.AddException(ex);
             }
         }
     }
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Keepalive started. Pinging {Uri} every 10 minutes.")]
-    private static partial void LogKeepaliveStarted(ILogger logger, Uri uri);
-
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Keepalive ping failed.")]
-    private static partial void LogKeepaliveFailed(ILogger logger, Exception ex);
 }

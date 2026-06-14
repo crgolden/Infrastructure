@@ -87,9 +87,21 @@ The GitHub Actions workflow (`.github/workflows/main_crgolden-infrastructure.yml
 
 ## Local SonarCloud analysis
 
-Generate coverage first (unit tests only), then run from `Infrastructure/`:
+Generate coverage first, then run from `Infrastructure/`. Unit coverage is OpenCover (branch-bearing,
+via `coverlet.console` pinned in `dotnet-tools.json` — restore with `dotnet tool restore`; see the
+workspace `TESTING.md` for the rationale). Infrastructure is unit-only in CI, so OpenCover is the only report.
 
 ```powershell
+dotnet build Infrastructure.Tests --configuration Release
+dotnet tool restore
+dotnet coverlet Infrastructure.Tests\bin\Release\net10.0 `
+  --target "dotnet" `
+  --targetargs "test --project Infrastructure.Tests --no-build --configuration Release -- --filter-trait Category=Unit" `
+  --format opencover --output "coverage.opencover.xml" `
+  --skipautoprops --exclude-by-attribute GeneratedCodeAttribute `
+  --exclude-by-file "**/obj/**" --exclude-by-file "**/Program.cs" `
+  --does-not-return-attribute DoesNotReturnAttribute --include "[Infrastructure]*"
+
 $env:SONAR_TOKEN = "<token>"
 & "$env:SystemDrive\sonar-scanner-8.0.1.6346-windows-x64\bin\sonar-scanner.bat" `
   "-Dsonar.projectKey=crgolden_Infrastructure" `
@@ -97,7 +109,11 @@ $env:SONAR_TOKEN = "<token>"
   "-Dsonar.sources=Infrastructure" `
   "-Dsonar.tests=Infrastructure.Tests" `
   "-Dsonar.exclusions=**/bin/**,**/obj/**" `
-  "-Dsonar.cs.vscoveragexml.reportsPaths=coverage.xml"
+  "-Dsonar.cs.opencover.reportsPaths=coverage.opencover.xml"
 ```
 
-Required coverage files: `coverage.xml`.
+Required coverage files: `coverage.opencover.xml` (unit, OpenCover).
+
+### When to build a truth table
+
+The coverage **score is read from SonarCloud, never hand-maintained** here. Build a per-method table in `COVERAGE-TRUTH-TABLES.md` only when SonarCloud flags a method with **cognitive complexity > 15 AND uncovered conditions > 0**: the table is escalation for the gnarly few, not a per-class deliverable. See `../DESIGN-LANGUAGE.md` and `../TESTING-COVERAGE.md`.

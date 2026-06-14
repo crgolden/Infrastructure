@@ -71,8 +71,11 @@ public sealed class AlertServiceTests
             .Setup(s => s.SendMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var factoryMock = new Mock<IAzureClientFactory<ServiceBusSender>>(MockBehavior.Strict);
-        factoryMock.Setup(f => f.CreateClient("email")).Returns(senderMock.Object);
+        var clientMock = new Mock<ServiceBusClient>(MockBehavior.Strict);
+        clientMock.Setup(c => c.CreateSender("email")).Returns(senderMock.Object);
+
+        var factoryMock = new Mock<IAzureClientFactory<ServiceBusClient>>(MockBehavior.Strict);
+        factoryMock.Setup(f => f.CreateClient("crgolden")).Returns(clientMock.Object);
 
         var options = Options.Create(new AlertOptions { RecipientEmail = "admin@example.com" });
         return (new AlertService(factoryMock.Object, options), senderMock);
