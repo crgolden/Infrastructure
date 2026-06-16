@@ -8,13 +8,13 @@ using Moq;
 using Moq.Protected;
 
 [Trait("Category", "Unit")]
-public sealed class ExperienceHealthCheckTests
+public sealed class InventoryHealthCheckTests
 {
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccessAndBodyIsHealthy_ReturnsHealthy()
     {
-        var check = new ExperienceHealthCheck(BuildClient(HttpStatusCode.OK, "Healthy"), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Experience", check, null, null) };
+        var check = new InventoryHealthCheck(BuildClient(HttpStatusCode.OK, "Healthy"), GetDefaultConfiguration());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Inventory", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -24,8 +24,8 @@ public sealed class ExperienceHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccessButBodyIsNotHealthy_ReturnsUnhealthy()
     {
-        var check = new ExperienceHealthCheck(BuildClient(HttpStatusCode.OK, "Degraded"), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Experience", check, null, null) };
+        var check = new InventoryHealthCheck(BuildClient(HttpStatusCode.OK, "Degraded"), GetDefaultConfiguration());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Inventory", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -35,8 +35,8 @@ public sealed class ExperienceHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
-        var check = new ExperienceHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Experience", check, null, null) };
+        var check = new InventoryHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Inventory", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -46,8 +46,8 @@ public sealed class ExperienceHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new ExperienceHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Experience", check, null, null) };
+        var check = new InventoryHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultConfiguration());
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Inventory", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -57,7 +57,7 @@ public sealed class ExperienceHealthCheckTests
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["ExperienceServerAddress"] = "https://crgolden-experience.azurewebsites.net" })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["InventoryServerAddress"] = "https://crgolden-inventory.azurewebsites.net" })
             .Build();
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content)

@@ -13,7 +13,7 @@ Infrastructure is the **observability surface** for a five-app system. It polls 
 | Repo | Role | How Infrastructure interacts |
 |---|---|---|
 | [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | `GET /health` — expects `200 Healthy` |
-| [Experience](https://github.com/crgolden/Experience) | Angular SPA + ASP.NET Core BFF | `GET /health` — expects `200 Healthy` |
+| [Inventory](https://github.com/crgolden/Inventory) | Angular SPA + ASP.NET Core BFF | `GET /health` — expects `200 Healthy` |
 | [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | `GET /health` — expects `200 Healthy` |
 | [Products](https://github.com/crgolden/Products) | OData v4 product catalog API | `GET /health` — expects `200 Healthy` |
 
@@ -33,7 +33,7 @@ Infrastructure is the **observability surface** for a five-app system. It polls 
 | MongoDB | 27017 | `ping` command via `IMongoClient` |
 | [Identity](https://github.com/crgolden/Identity) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 | [Manuals](https://github.com/crgolden/Manuals) | 443 | HTTP GET `/health`, expects `200 Healthy` |
-| [Experience](https://github.com/crgolden/Experience) | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| [Inventory](https://github.com/crgolden/Inventory) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 | [Products](https://github.com/crgolden/Products) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 
 Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert message is published to Azure Service Bus. A recovery message is sent when the service returns to `Healthy`.

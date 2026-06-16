@@ -34,7 +34,7 @@ One test class per health check. Each check accepts its external dependency via 
 | Class | Dependency mocked | What it tests |
 |-------|-------------------|---------------|
 | `ElasticsearchHealthCheckTests` | `IHttpClientFactory` | `GET /_cluster/health` — healthy / unhealthy response |
-| `ExperienceHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
+| `InventoryHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `IdentityHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `IISHttpsHealthCheckTests` | `IHttpClientFactory` | HTTPS `:443` reachability |
 | `KibanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/status` |

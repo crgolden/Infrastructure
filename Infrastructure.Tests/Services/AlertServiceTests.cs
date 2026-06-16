@@ -64,6 +64,16 @@ public sealed class AlertServiceTests
             service.SendAlertAsync(result, CancellationToken.None));
     }
 
+    [Fact]
+    public void Constructor_WhenRecipientEmailIsEmpty_ThrowsInvalidOperationException()
+    {
+        var factoryMock = new Mock<IAzureClientFactory<ServiceBusClient>>(MockBehavior.Strict);
+
+        Assert.Throws<InvalidOperationException>(() => new AlertService(
+            factoryMock.Object,
+            Options.Create(new AlertOptions { RecipientEmail = null })));
+    }
+
     private static (AlertService service, Mock<ServiceBusSender> senderMock) BuildService()
     {
         var senderMock = new Mock<ServiceBusSender>(MockBehavior.Strict);

@@ -201,6 +201,51 @@ public sealed class HealthMonitorServiceTests
             Times.AtLeastOnce);
     }
 
+    [Fact]
+    public void Constructor_WhenIntervalSecondsIsNull_ThrowsInvalidOperationException()
+    {
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+
+        Assert.Throws<InvalidOperationException>(() => new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            Options.Create(new MonitoringOptions { IntervalSeconds = null })));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithDegradedService_MapsToDegradedStatus()
+    {
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildReport(HealthStatus.Degraded));
+
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
+        hubContext.Setup(h => h.Clients).Returns(clients.Object);
+        clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+
+        var svc = new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            GetDefaultOptions());
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        await svc.StartAsync(cts.Token);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(svc.LastSnapshot);
+        Assert.Contains(svc.LastSnapshot.Results, r => r.Status == ServiceStatus.Degraded);
+    }
+
     private static IOptions<MonitoringOptions> GetDefaultOptions() =>
         Options.Create(new MonitoringOptions { IntervalSeconds = 1 });
 

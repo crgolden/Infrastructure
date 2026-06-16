@@ -179,7 +179,7 @@ try
         .AddHttpClient<UptimeKumaHealthCheck>().Services
         .AddHttpClient<IdentityHealthCheck>().Services
         .AddHttpClient<ManualsHealthCheck>().Services
-        .AddHttpClient<ExperienceHealthCheck>().Services
+        .AddHttpClient<InventoryHealthCheck>().Services
         .AddHttpClient<ProductsHealthCheck>().Services
         .AddTransient<Func<IDbConnection>>(_ => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
         .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
@@ -199,7 +199,7 @@ try
         .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
         .AddCheck<IdentityHealthCheck>("Identity", tags: ["service"])
         .AddCheck<ManualsHealthCheck>("Manuals", tags: ["service"])
-        .AddCheck<ExperienceHealthCheck>("Experience", tags: ["service"])
+        .AddCheck<InventoryHealthCheck>("Inventory", tags: ["service"])
         .AddCheck<ProductsHealthCheck>("Products", tags: ["service"]).Services
         .AddSignalR()
         .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())).Services
