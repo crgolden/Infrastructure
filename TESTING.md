@@ -64,7 +64,7 @@ One test class per health check. Each check accepts its external dependency via 
 | Class | What it tests |
 |-------|---------------|
 | `AlertServiceTests` | `AlertService` — email alert on `Healthy → Unhealthy` / `Unhealthy → Healthy` transitions via mocked `IEmailSender` |
-| `HealthMonitorServiceTests` | `HealthMonitorService` — background poll loop: snapshot storage, SignalR broadcast, alert triggering |
+| `HealthMonitorServiceTests` | `HealthMonitorService` — background poll loop: snapshot storage, SignalR broadcast, alert triggering; resilience: poll continues when `CheckHealthAsync` throws, SignalR throw does not block alerting, alert throw does not corrupt transition state |
 
 ### `Controllers/`
 

@@ -3,6 +3,7 @@ namespace Infrastructure.Services;
 using Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Models;
 using OpenTelemetry;
@@ -11,6 +12,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 {
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
+    private readonly ILogger<HealthMonitorService> _logger;
     private readonly HealthCheckService _healthCheckService;
     private readonly IHubContext<HealthHub> _hubContext;
     private readonly IAlertService _alertService;
@@ -19,11 +21,13 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
     private HealthSnapshot? _lastSnapshot;
 
     public HealthMonitorService(
+        ILogger<HealthMonitorService> logger,
         HealthCheckService healthCheckService,
         IHubContext<HealthHub> hubContext,
         IAlertService alertService,
         IOptions<MonitoringOptions> options)
     {
+        _logger = logger;
         _healthCheckService = healthCheckService;
         _hubContext = hubContext;
         _alertService = alertService;
@@ -67,9 +71,21 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
     {
         // Suppress the per-poll probe spans (HTTP/SQL calls to every monitored service) — pure App Insights noise; transitions are surfaced via AlertService + SignalR.
         HealthReport report;
-        using (SuppressInstrumentationScope.Begin())
+        try
         {
-            report = await _healthCheckService.CheckHealthAsync(cancellationToken);
+            using (SuppressInstrumentationScope.Begin())
+            {
+                report = await _healthCheckService.CheckHealthAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Health check service threw during poll");
+            return;
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -86,21 +102,43 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
             _lastSnapshot = snapshot;
         }
 
-        await _hubContext.Clients.All.SendAsync("ReceiveSnapshot", snapshot, cancellationToken);
+        try
+        {
+            await _hubContext.Clients.All.SendAsync("ReceiveSnapshot", snapshot, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to push health snapshot to SignalR hub");
+        }
 
         foreach (var result in results)
         {
             _previousStatuses.TryGetValue(result.Name, out var previous);
             var current = result.Status;
 
-            switch (previous)
+            try
             {
-                case ServiceStatus.Unknown or ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
-                    await _alertService.SendAlertAsync(result, cancellationToken);
-                    break;
-                case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
-                    await _alertService.SendRecoveryAsync(result, cancellationToken);
-                    break;
+                switch (previous)
+                {
+                    case ServiceStatus.Unknown or ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
+                        await _alertService.SendAlertAsync(result, cancellationToken);
+                        break;
+                    case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
+                        await _alertService.SendRecoveryAsync(result, cancellationToken);
+                        break;
+                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send alert for {ServiceName}", result.Name);
             }
 
             _previousStatuses[result.Name] = current;

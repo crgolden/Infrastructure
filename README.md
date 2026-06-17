@@ -115,7 +115,7 @@ dotnet run
 |---|---|
 | Dashboard | `https://localhost:5001/` |
 | JSON status API | `https://localhost:5001/api/status` |
-| ASP.NET Core health endpoint | `https://localhost:5001/health` |
+| ASP.NET Core health endpoint | `https://localhost:5001/health` — always HTTP 200; JSON body reports each downstream check's status |
 
 ## Project Structure
 
