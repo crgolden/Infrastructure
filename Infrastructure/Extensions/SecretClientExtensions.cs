@@ -24,8 +24,8 @@ public static class SecretClientExtensions
             var elasticsearchUsername = secretClient.GetSecret("ElasticsearchUsername");
             var elasticsearchPassword = secretClient.GetSecret("ElasticsearchPassword");
             var resendApiToken = secretClient.GetSecret("ResendApiToken");
-            var sqlServerUserId = secretClient.GetSecret("IdentitySqlServerUserId");
-            var sqlServerPassword = secretClient.GetSecret("IdentitySqlServerPassword");
+            var sqlServerUserId = secretClient.GetSecret("MasterSqlServerUserId");
+            var sqlServerPassword = secretClient.GetSecret("MasterSqlServerPassword");
             var redisPassword = secretClient.GetSecret("RedisPassword");
             var mongoDbUsername = secretClient.GetSecret("MongoDbUsername");
             var mongoDbPassword = secretClient.GetSecret("MongoDbPassword");
