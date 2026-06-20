@@ -8,7 +8,7 @@ An ASP.NET Core 10 service-health monitoring application that continuously polls
 
 ## Sibling Applications
 
-Infrastructure is the **observability surface** for a five-app system. It polls each sibling's `/health` endpoint and sends an alert email on the first `Healthy → Unhealthy` transition (and a recovery email on the way back).
+Infrastructure is the **observability surface** for the `crgolden` service fleet. It polls each sibling's `/health` endpoint and sends an alert email on the first `Healthy → Unhealthy` transition (and a recovery email on the way back).
 
 | Repo | Role | How Infrastructure interacts |
 |---|---|---|
@@ -37,6 +37,8 @@ Infrastructure is the **observability surface** for a five-app system. It polls 
 | [Products](https://github.com/crgolden/Products) | 443 | HTTP GET `/health`, expects `200 Healthy` |
 
 Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert message is published to Azure Service Bus. A recovery message is sent when the service returns to `Healthy`.
+
+> **Not yet monitored:** the [Churches](https://github.com/crgolden/Churches) BFF (`crgolden-churches`) and the [Directory](https://github.com/crgolden/Directory) API (`crgolden-directory`) are deployed and expose `/health`, but the dashboard does not poll them yet — there is no `ChurchesHealthCheck` / `DirectoryHealthCheck`. They are covered externally by the [Uptime Kuma](../Tools/Uptime%20Kuma/README.md) monitors. To add internal polling, follow the [DEPLOYMENT.md](../DEPLOYMENT.md) "Onboarding a New App" steps (add a `SiblingAppHealthCheck`, register it in `Program.cs`, and set `<AppName>Address`).
 
 ## Tech Stack
 
