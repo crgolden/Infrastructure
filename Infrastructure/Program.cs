@@ -179,6 +179,7 @@ try
         .AddHttpClient<PlexHealthCheck>().Services
         .AddHttpClient<HomeAssistantHealthCheck>().Services
         .AddHttpClient<UptimeKumaHealthCheck>().Services
+        .AddHttpClient<GrafanaHealthCheck>().Services
         .AddHttpClient<IdentityHealthCheck>().Services
         .AddHttpClient<ManualsHealthCheck>().Services
         .AddHttpClient<InventoryHealthCheck>().Services
@@ -195,6 +196,7 @@ try
         .AddCheck<PlexHealthCheck>("Plex", tags: ["media"])
         .AddCheck<HomeAssistantHealthCheck>("Home Assistant", tags: ["home"])
         .AddCheck<UptimeKumaHealthCheck>("Uptime Kuma", tags: ["monitoring"])
+        .AddCheck<GrafanaHealthCheck>("Grafana", tags: ["monitoring"])
         .AddCheck<YawcamHealthCheck>("Yawcam AI", tags: ["surveillance"])
         .AddCheck<WMSvcHealthCheck>("WMSvc", tags: ["service"])
         .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])

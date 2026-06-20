@@ -14,6 +14,8 @@ public sealed class ServiceEndpointOptions
 
     public Uri? UptimeKuma { get; set; }
 
+    public Uri? Grafana { get; set; }
+
     public string? YawcamHost { get; set; }
 
     public int? YawcamPort { get; set; }
