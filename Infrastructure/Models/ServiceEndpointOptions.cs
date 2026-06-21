@@ -16,6 +16,10 @@ public sealed class ServiceEndpointOptions
 
     public Uri? Grafana { get; set; }
 
+    public string? AlloyHost { get; set; }
+
+    public int? AlloyPort { get; set; }
+
     public string? YawcamHost { get; set; }
 
     public int? YawcamPort { get; set; }

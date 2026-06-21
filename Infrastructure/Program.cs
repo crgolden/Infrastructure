@@ -197,6 +197,7 @@ try
         .AddCheck<HomeAssistantHealthCheck>("Home Assistant", tags: ["home"])
         .AddCheck<UptimeKumaHealthCheck>("Uptime Kuma", tags: ["monitoring"])
         .AddCheck<GrafanaHealthCheck>("Grafana", tags: ["monitoring"])
+        .AddCheck<AlloyHealthCheck>("Alloy", tags: ["monitoring"])
         .AddCheck<YawcamHealthCheck>("Yawcam AI", tags: ["surveillance"])
         .AddCheck<WMSvcHealthCheck>("WMSvc", tags: ["service"])
         .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])
