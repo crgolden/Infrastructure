@@ -30,6 +30,7 @@ using MongoDB.Driver;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using StackExchange.Redis;
 #pragma warning restore SA1200
@@ -119,7 +120,11 @@ try
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
                 .AddRuntimeInstrumentation()
                 .AddView(instrument =>
-                    instrument.Meter.Name == "System.Net.Http" ? MetricStreamConfiguration.Drop : null))
+                    instrument.Meter.Name == "System.Net.Http" ? MetricStreamConfiguration.Drop : null)
+                .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
+            .WithTracing(tracerProviderBuilder => tracerProviderBuilder
+                .SetSampler(new AlwaysOnSampler())
+                .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .UseAzureMonitor().Services
             .AddDataProtection()
             .SetApplicationName(applicationName)
