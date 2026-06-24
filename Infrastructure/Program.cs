@@ -189,6 +189,8 @@ try
         .AddHttpClient<ManualsHealthCheck>().Services
         .AddHttpClient<InventoryHealthCheck>().Services
         .AddHttpClient<ProductsHealthCheck>().Services
+        .AddHttpClient<ChurchesHealthCheck>().Services
+        .AddHttpClient<DirectoryHealthCheck>().Services
         .AddTransient<Func<IDbConnection>>(_ => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
         .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
         .AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings))
@@ -210,7 +212,9 @@ try
         .AddCheck<IdentityHealthCheck>("Identity", tags: ["service"])
         .AddCheck<ManualsHealthCheck>("Manuals", tags: ["service"])
         .AddCheck<InventoryHealthCheck>("Inventory", tags: ["service"])
-        .AddCheck<ProductsHealthCheck>("Products", tags: ["service"]).Services
+        .AddCheck<ProductsHealthCheck>("Products", tags: ["service"])
+        .AddCheck<ChurchesHealthCheck>("Churches", tags: ["service"])
+        .AddCheck<DirectoryHealthCheck>("Directory", tags: ["service"]).Services
         .AddSignalR()
         .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())).Services
         .AddSingleton<IAlertService, AlertService>()
