@@ -8,37 +8,44 @@ An ASP.NET Core 10 service-health monitoring application that continuously polls
 
 ## Sibling Applications
 
-Infrastructure is the **observability surface** for the `crgolden` service fleet. It polls each sibling's `/health` endpoint and sends an alert email on the first `Healthy → Unhealthy` transition (and a recovery email on the way back).
+Infrastructure is the **observability surface** for the `crgolden` service fleet. It polls each sibling's `/health` endpoint and sends an alert email on the `Healthy → Unhealthy` transition (and a recovery email on the way back). Each sibling check resolves its base URL from a configuration key and treats the response as healthy only when the body equals `Healthy`.
 
-| Repo | Role | How Infrastructure interacts |
+| Repo | Role | Base-URL config key |
 |---|---|---|
-| [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | `GET /health` — expects `200 Healthy` |
-| [Inventory](https://github.com/crgolden/Inventory) | Angular SPA + ASP.NET Core BFF | `GET /health` — expects `200 Healthy` |
-| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | `GET /health` — expects `200 Healthy` |
-| [Products](https://github.com/crgolden/Products) | OData v4 product catalog API | `GET /health` — expects `200 Healthy` |
+| [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | `OidcAuthority` |
+| [Inventory](https://github.com/crgolden/Inventory) | Angular SPA + ASP.NET Core BFF | `InventoryServerAddress` |
+| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | `ManualsApiAddress` |
+| [Products](https://github.com/crgolden/Products) | OData v4 product catalog API | `ProductsApiAddress` |
+| [Churches](https://github.com/crgolden/Churches) | Church discovery Angular SSR + Node (Express) BFF | `ChurchesServerAddress` |
+| [Directory](https://github.com/crgolden/Directory) | Church directory API | `DirectoryApiAddress` |
 
 ## Services Monitored
 
-| Service | Port | Check Method |
+Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks GET the URL from the listed config key; TCP checks open a socket to the host/port; the rest use their native client.
+
+| Service | Check | Configured via |
 |---|---|---|
-| IIS HTTPS | 443 | HTTP GET |
-| IIS HTTP (CertifyTheWeb) | 80 | HTTP GET |
-| SQL Server | 1433 | `SELECT 1` via `SqlConnection` |
-| Elasticsearch | 9200 | HTTP GET `/_cluster/health` |
-| Kibana | 5601 | HTTP GET `/api/status` |
-| Plex Media Server | 32400 | HTTP GET `/identity` |
-| Yawcam AI | 5995 | TCP connect |
-| WMSvc | 8172 | TCP connect |
-| Redis | 6379 | `PING` via `IConnectionMultiplexer` |
-| MongoDB | 27017 | `ping` command via `IMongoClient` |
-| [Identity](https://github.com/crgolden/Identity) | 443 | HTTP GET `/health`, expects `200 Healthy` |
-| [Manuals](https://github.com/crgolden/Manuals) | 443 | HTTP GET `/health`, expects `200 Healthy` |
-| [Inventory](https://github.com/crgolden/Inventory) | 443 | HTTP GET `/health`, expects `200 Healthy` |
-| [Products](https://github.com/crgolden/Products) | 443 | HTTP GET `/health`, expects `200 Healthy` |
+| IIS HTTPS | HTTP GET | `ServiceEndpointOptions:IisHttps` |
+| SQL Server | `SELECT 1` via `SqlConnection` | `SqlConnectionStringBuilder` |
+| Elasticsearch | HTTP GET `/_cluster/health` (Basic auth) | `ServiceEndpointOptions:Elasticsearch` |
+| Kibana | HTTP GET `/api/status` (Basic auth) | `ServiceEndpointOptions:Kibana` |
+| Plex Media Server | HTTP GET `/identity` | `ServiceEndpointOptions:Plex` |
+| Home Assistant | HTTP GET | `ServiceEndpointOptions:HomeAssistant` |
+| Uptime Kuma | HTTP GET | `ServiceEndpointOptions:UptimeKuma` |
+| Grafana | HTTP GET `/api/health` | `ServiceEndpointOptions:Grafana` |
+| Grafana Alloy | TCP connect | `ServiceEndpointOptions:AlloyHost` / `:AlloyPort` |
+| Yawcam AI | TCP connect | `ServiceEndpointOptions:YawcamHost` / `:YawcamPort` |
+| WMSvc | TCP connect | `ServiceEndpointOptions:WmsvcHost` / `:WmsvcPort` |
+| Redis | `PING` via `IConnectionMultiplexer` | `RedisHost` / `RedisPort` / `RedisSsl` |
+| MongoDB | `ping` command via `IMongoClient` | `MongoServerHost` / `MongoServerPort` / `MongoUseTls` |
+| [Identity](https://github.com/crgolden/Identity) | HTTP GET `/health`, body `Healthy` | `OidcAuthority` |
+| [Manuals](https://github.com/crgolden/Manuals) | HTTP GET `/health`, body `Healthy` | `ManualsApiAddress` |
+| [Inventory](https://github.com/crgolden/Inventory) | HTTP GET `/health`, body `Healthy` | `InventoryServerAddress` |
+| [Products](https://github.com/crgolden/Products) | HTTP GET `/health`, body `Healthy` | `ProductsApiAddress` |
+| [Churches](https://github.com/crgolden/Churches) | HTTP GET `/health`, body `Healthy` | `ChurchesServerAddress` |
+| [Directory](https://github.com/crgolden/Directory) | HTTP GET `/health`, body `Healthy` | `DirectoryApiAddress` |
 
-Health checks are polled every 30 seconds (configurable). When a service transitions from `Healthy` to `Unhealthy`, an alert message is published to Azure Service Bus. A recovery message is sent when the service returns to `Healthy`.
-
-> **Not yet monitored:** the [Churches](https://github.com/crgolden/Churches) BFF (`crgolden-churches`) and the [Directory](https://github.com/crgolden/Directory) API (`crgolden-directory`) are deployed and expose `/health`, but the dashboard does not poll them yet — there is no `ChurchesHealthCheck` / `DirectoryHealthCheck`. They are covered externally by the [Uptime Kuma](../Tools/Uptime%20Kuma/README.md) monitors. To add internal polling, follow the [DEPLOYMENT.md](../DEPLOYMENT.md) "Onboarding a New App" steps (add a `SiblingAppHealthCheck`, register it in `Program.cs`, and set `<AppName>Address`).
+Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30). When a service transitions from `Healthy` (or `Unknown`) to `Unhealthy`, an alert message is published to the Azure Service Bus `email` queue; a recovery message is sent when it returns to `Healthy`. `Degraded` does not trigger an email.
 
 ## Tech Stack
 
@@ -47,7 +54,7 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 | Framework | ASP.NET Core 10 |
 | Real-time dashboard | SignalR |
 | Email alerts | Azure Service Bus |
-| Observability | Azure Monitor, OpenTelemetry, Serilog, Elasticsearch |
+| Observability | Azure Monitor, OpenTelemetry (OTLP → Grafana Alloy), Serilog → Elasticsearch |
 | Hosting | Azure App Service |
 | Secrets | Azure Key Vault |
 | Data Protection | Azure Blob Storage + Azure Key Vault |
@@ -57,8 +64,7 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 | Tool | Notes |
 |---|---|
 | .NET 10 SDK | |
-| Azure Key Vault | Required in production only; non-production uses User Secrets |
-| Azure Key Vault | With the secrets listed below |
+| Azure Key Vault | Holds the secrets listed below; used in **production only** — non-production reads the same values from User Secrets / environment variables |
 | Azure Service Bus namespace | With an `email` queue for outbound alert messages |
 
 ## Getting Started
@@ -67,44 +73,66 @@ Health checks are polled every 30 seconds (configurable). When a service transit
 
 All `null` values in `appsettings.json` must be supplied via **User Secrets** (development) or environment variables (CI) or Azure Key Vault (production). In non-production, `DefaultAzureCredential` is never constructed — all config comes from User Secrets or env vars.
 
-**Non-secret values (User Secrets / environment):**
+**Non-secret values (User Secrets / environment / `appsettings.json`):**
 
 | Key | Description |
 |---|---|
-| `KeyVaultUri` | Azure Key Vault URI |
-| `ElasticsearchNode` | Elasticsearch node URI (for Serilog sink) |
-| `BlobUri` | Azure Blob Storage URI for Data Protection keys |
-| `DataProtectionKeyIdentifier` | Azure Key Vault key URI for Data Protection |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Monitor connection string |
-| `AlertOptions:RecipientEmail` | Email address to receive health alerts |
+| `OidcAuthority` | Identity OIDC authority — also the Identity `/health` target |
+| `MonitoringOptions:IntervalSeconds` | Poll interval in seconds (default 30) |
 | `ServiceEndpointOptions:IisHttps` | URL for IIS HTTPS check |
 | `ServiceEndpointOptions:Elasticsearch` | URL for Elasticsearch health check |
 | `ServiceEndpointOptions:Kibana` | URL for Kibana status check |
 | `ServiceEndpointOptions:Plex` | URL for Plex identity check |
-| `ServiceEndpointOptions:YawcamHost` | Hostname for Yawcam TCP check |
-| `ServiceEndpointOptions:YawcamPort` | Port for Yawcam TCP check (default: 5995) |
-| `ServiceEndpointOptions:WmsvcHost` | Hostname for WMSvc TCP check |
-| `ServiceEndpointOptions:WmsvcPort` | Port for WMSvc TCP check (default: 8172) |
+| `ServiceEndpointOptions:HomeAssistant` | URL for Home Assistant check |
+| `ServiceEndpointOptions:UptimeKuma` | URL for Uptime Kuma check |
+| `ServiceEndpointOptions:Grafana` | URL for Grafana health check |
+| `ServiceEndpointOptions:AlloyHost` / `:AlloyPort` | Host/port for the Grafana Alloy TCP check |
+| `ServiceEndpointOptions:YawcamHost` / `:YawcamPort` | Host/port for the Yawcam TCP check |
+| `ServiceEndpointOptions:WmsvcHost` / `:WmsvcPort` | Host/port for the WMSvc TCP check |
 | `SqlConnectionStringBuilder:DataSource` | SQL Server host |
-| `SqlConnectionStringBuilder:InitialCatalog` | Database name |
-| `RedisHost` | Redis hostname |
-| `RedisPort` | Redis port |
-| `MongoDbHost` | MongoDB hostname |
-| `MongoDbPort` | MongoDB port |
+| `SqlConnectionStringBuilder:InitialCatalog` | Database name (default `master`) |
+| `RedisHost` / `RedisPort` / `RedisSsl` | Redis endpoint and TLS flag |
+| `MongoDatabaseName` | MongoDB auth database (default `crgolden`) |
+| `MongoServerHost` / `MongoServerPort` / `MongoUseTls` | MongoDB endpoint and TLS flag |
+| `InventoryServerAddress` | Inventory base URL (`/health` target) |
+| `ManualsApiAddress` | Manuals base URL (`/health` target) |
+| `ProductsApiAddress` | Products base URL (`/health` target) |
+| `ChurchesServerAddress` | Churches base URL (`/health` target) |
+| `DirectoryApiAddress` | Directory base URL (`/health` target) |
 
-**Secrets (Azure Key Vault):**
+> The alert recipient (`AlertOptions.RecipientEmail`) is **not** a config key — it is bound from the `AdminEmail` secret at startup.
 
-| Secret name | Description |
+**Production-only configuration (Azure App Service settings):**
+
+| Key | Description |
 |---|---|
-| `ServiceBusNamespace` | Azure Service Bus fully-qualified namespace (production) |
-| `ElasticsearchUsername` | Elasticsearch username (Serilog sink) |
-| `ElasticsearchPassword` | Elasticsearch password (Serilog sink) |
-| `SqlServerUserId` | SQL Server login |
-| `SqlServerPassword` | SQL Server password |
-| `RedisPassword` | Redis `AUTH` password |
-| `MongoDbUsername` | MongoDB username |
-| `MongoDbPassword` | MongoDB password |
-| `AdminEmail` | Alert destination email address |
+| `KeyVaultUri` | Azure Key Vault URI (secrets fetched at startup) |
+| `ElasticsearchNode` | Elasticsearch node URI (Serilog sink) |
+| `BlobUri` | Azure Blob Storage URI for Data Protection keys |
+| `DataProtectionKeyIdentifier` | Azure Key Vault key URI for Data Protection |
+| `ServiceBusNamespace` | Service Bus fully-qualified namespace (email queue) |
+| `AlloyEndpoint` | OTLP exporter endpoint for metrics + traces |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Monitor connection string |
+| `WEBSITE_SITE_NAME` | App name (set by Azure; used as the OpenTelemetry service name) |
+| `WEBSITE_HOSTNAME` | Host (set by Azure; used by `KeepaliveService` to self-ping `/ping`) |
+| `DefaultAzureCredentialOptions` | `DefaultAzureCredential` chain options |
+
+**Secrets:** Production fetches these from **Azure Key Vault**; non-production reads them from **User Secrets / environment variables**. Note that the two SQL Server key names differ between the sources.
+
+| Key Vault secret | User Secrets / env key | Description |
+|---|---|---|
+| `ElasticsearchUsername` | `ElasticsearchUsername` | Elasticsearch user (Serilog sink + ES/Kibana checks) |
+| `ElasticsearchPassword` | `ElasticsearchPassword` | Elasticsearch password |
+| `ResendApiToken` | `ResendApiToken` | Resend API token |
+| `MasterSqlServerUserId` | `SqlServerUserId` | SQL Server login |
+| `MasterSqlServerPassword` | `SqlServerPassword` | SQL Server password |
+| `RedisPassword` | `RedisPassword` | Redis `AUTH` password |
+| `MongoDbUsername` | `MongoDbUsername` | MongoDB username |
+| `MongoDbPassword` | `MongoDbPassword` | MongoDB password |
+| `AdminEmail` | `AdminEmail` | Alert recipient email address |
+| `InfrastructureClientId` | `InfrastructureClientId` | OIDC client ID |
+| `InfrastructureClientSecret` | `InfrastructureClientSecret` | OIDC client secret |
+| — | `ServiceBusConnectionString` | Service Bus connection string (non-production only) |
 
 ### 2. Run
 
@@ -113,11 +141,13 @@ cd Infrastructure
 dotnet run
 ```
 
-| Endpoint | URL |
-|---|---|
-| Dashboard | `https://localhost:5001/` |
-| JSON status API | `https://localhost:5001/api/status` |
-| ASP.NET Core health endpoint | `https://localhost:5001/health` — always HTTP 200; JSON body reports each downstream check's status |
+| Endpoint | URL | Notes |
+|---|---|---|
+| Dashboard | `https://localhost:5001/` | Razor page; requires OIDC login |
+| JSON status API | `https://localhost:5001/api/status` | Latest `HealthSnapshot`; requires auth; `503` until the first poll completes |
+| SignalR hub | `https://localhost:5001/hubs/health` | Pushes the `ReceiveSnapshot` message; requires auth |
+| ASP.NET Core health endpoint | `https://localhost:5001/health` | Anonymous; always HTTP 200; JSON body reports each downstream check's status |
+| Keepalive ping | `https://localhost:5001/ping` | Anonymous; returns 200. `KeepaliveService` self-pings this in Azure to avoid cold starts |
 
 ## Project Structure
 
@@ -125,6 +155,14 @@ dotnet run
 Infrastructure/        # ASP.NET Core 10 — health polling, SignalR dashboard, Azure Service Bus email alerts
 Infrastructure.Tests/  # xUnit v3 unit tests (Moq)
 ```
+
+Key components inside `Infrastructure/`:
+
+- `HealthChecks/` — one `IHealthCheck` per monitored service; the six sibling-app checks extend `SiblingAppHealthCheck`.
+- `Services/HealthMonitorService` — `BackgroundService` poll loop that stores the latest snapshot, broadcasts it over SignalR, and triggers alerts on status transitions.
+- `Services/AlertService` — publishes alert/recovery emails to the Azure Service Bus `email` queue.
+- `Services/KeepaliveService` — `BackgroundService` that self-pings `/ping` every 10 minutes when `WEBSITE_HOSTNAME` is set.
+- `Controllers/StatusController` + `Hubs/HealthHub` — the `[Authorize]` status API and SignalR hub.
 
 ## Commands
 
@@ -151,4 +189,4 @@ The GitHub Actions workflow triggers on pushes to `main` and pull requests.
 **Deploy job** — runs after a successful build on `main`:
 1. Deploys the web app to **Azure App Service** `crgolden-infrastructure` (Production slot) via Azure OIDC
 
-> **Firewall note:** Windows Firewall inbound rules for monitored ports (1433, 9200, 5601, 32400, 5995, 6379, 27017) must allow inbound traffic from Azure App Service outbound IPs. Update any rules scoped to specific IPs or the local subnet accordingly.
+> **Firewall note:** Each monitored TCP/HTTP port on the host (SQL `1433`, Elasticsearch `9200`, Kibana `5601`, Plex `32400`, Yawcam `5995`, WMSvc `8172`, Redis `6379`, MongoDB `27017`, plus the configured IIS/Home Assistant/Uptime Kuma/Grafana/Alloy endpoints) must allow inbound traffic from the Azure App Service outbound IPs. Update any rules scoped to specific IPs or the local subnet accordingly.

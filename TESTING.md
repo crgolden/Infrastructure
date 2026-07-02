@@ -12,7 +12,7 @@ Unit test coding standards (MockBehavior.Strict, argument verification, SetupSeq
 
 ---
 
-For the `.NET 10 SDK xUnit caveat` (why `dotnet test` doesn't work), and why you run the compiled `.exe` directly, see the workspace-level [TESTING.md](../TESTING.md).
+`Infrastructure.Tests` sets `<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>`, so both `dotnet test` (used by CI) and the compiled `.exe` (preferred locally for `-showLiveOutput`) route through the xUnit v3 Microsoft Testing Platform runner. See the workspace-level [TESTING.md](../TESTING.md) for the runner-flag caveats and the coverage rationale.
 
 ## Running Tests Locally
 
@@ -51,6 +51,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `HomeAssistantHealthCheckTests` | `IHttpClientFactory` | `GET /` → HTTP 200 |
 | `UptimeKumaHealthCheckTests` | `IHttpClientFactory` | `GET /` → HTTP 200 |
 | `GrafanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/health` → HTTP 200 |
+| `AlloyHealthCheckTests` | `Func<TcpClient>` | TCP connect to `AlloyHost:AlloyPort` |
 
 ### `Hubs/`
 
@@ -68,14 +69,22 @@ One test class per health check. Each check accepts its external dependency via 
 
 | Class | What it tests |
 |-------|---------------|
-| `AlertServiceTests` | `AlertService` — email alert on `Healthy → Unhealthy` / `Unhealthy → Healthy` transitions via mocked `IEmailSender` |
+| `AlertServiceTests` | `AlertService` — publishes alert/recovery `ServiceBusMessage`s to the `email` queue via mocked `IAzureClientFactory<ServiceBusClient>` / `ServiceBusSender` |
 | `HealthMonitorServiceTests` | `HealthMonitorService` — background poll loop: snapshot storage, SignalR broadcast, alert triggering; resilience: poll continues when `CheckHealthAsync` throws, SignalR throw does not block alerting, alert throw does not corrupt transition state |
+| `KeepaliveServiceTests` | `KeepaliveService` — no HTTP call when `WEBSITE_HOSTNAME` is unset; self-pings `/ping` when it is set |
 
 ### `Controllers/`
 
 | Class | What it tests |
 |-------|---------------|
-| `StatusControllerTests` | `StatusController` — returns current `HealthSnapshot` from `IHealthMonitorService` |
+| `StatusControllerTests` | `StatusController` — returns the current `HealthSnapshot` from `IHealthMonitorService`, or `503` when none yet |
+
+### `Extensions/`
+
+| Class | What it tests |
+|-------|---------------|
+| `ConfigurationExtensionsTests` | `GetRequired<T>` (value / throw-on-missing) and `GetInfrastructureSecrets` — the non-production secret tuple read from `IConfiguration` |
+| `SecretClientExtensionsTests` | `GetInfrastructureSecrets` — the production secret tuple read from a mocked `SecretClient` (Key Vault names, e.g. `MasterSqlServerUserId`) |
 
 ---
 
