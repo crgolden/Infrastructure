@@ -54,7 +54,7 @@ Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30).
 | Framework | ASP.NET Core 10 |
 | Real-time dashboard | SignalR |
 | Email alerts | Azure Service Bus |
-| Observability | Azure Monitor, OpenTelemetry (OTLP → Grafana Alloy), Serilog → Elasticsearch |
+| Observability | OpenTelemetry (OTLP → Grafana Alloy), Serilog → Elasticsearch |
 | Hosting | Azure App Service |
 | Secrets | Azure Key Vault |
 | Data Protection | Azure Blob Storage + Azure Key Vault |
@@ -112,7 +112,6 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `DataProtectionKeyIdentifier` | Azure Key Vault key URI for Data Protection |
 | `ServiceBusNamespace` | Service Bus fully-qualified namespace (email queue) |
 | `AlloyEndpoint` | OTLP exporter endpoint for metrics + traces |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Azure Monitor connection string |
 | `WEBSITE_SITE_NAME` | App name (set by Azure; used as the OpenTelemetry service name) |
 | `WEBSITE_HOSTNAME` | Host (set by Azure; used by `KeepaliveService` to self-ping `/ping`) |
 | `DefaultAzureCredentialOptions` | `DefaultAzureCredential` chain options |
