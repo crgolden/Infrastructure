@@ -152,7 +152,7 @@ dotnet run
 
 ```
 Infrastructure/        # ASP.NET Core 10 — health polling, SignalR dashboard, Azure Service Bus email alerts
-Infrastructure.Tests/  # xUnit v3 unit tests (Moq)
+Infrastructure.Tests.Unit/  # xUnit v3 unit tests (Moq)
 ```
 
 Key components inside `Infrastructure/`:
@@ -170,7 +170,7 @@ Key components inside `Infrastructure/`:
 dotnet build
 
 # Unit tests only
-dotnet test --project Infrastructure.Tests --configuration Release -- --filter-trait "Category=Unit"
+dotnet test --project Infrastructure.Tests.Unit --configuration Release -- --filter-trait "Category=Unit"
 
 # Publish web app (-r win-x86 required: Azure App Service Free tier supports 32-bit only)
 dotnet publish Infrastructure -c Release -r win-x86 --self-contained false -o ./publish

@@ -8,6 +8,6 @@
     <File Path="README.md" />
     <File Path="TESTING.md" />
   </Folder>
-  <Project Path="Infrastructure.Tests/Infrastructure.Tests.csproj" />
+  <Project Path="Infrastructure.Tests.Unit/Infrastructure.Tests.Unit.csproj" />
   <Project Path="Infrastructure/Infrastructure.csproj" />
 </Solution>

@@ -8,19 +8,19 @@ Unit test coding standards (MockBehavior.Strict, argument verification, SetupSeq
 
 | Tier | Trait | Project | Requires Azure? | Runs in CI |
 |------|-------|---------|-----------------|------------|
-| Unit | `Category=Unit` | `Infrastructure.Tests` | No | Every push/PR |
+| Unit | `Category=Unit` | `Infrastructure.Tests.Unit` | No | Every push/PR |
 
 ---
 
-`Infrastructure.Tests` sets `<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>`, so both `dotnet test` (used by CI) and the compiled `.exe` (preferred locally for `-showLiveOutput`) route through the xUnit v3 Microsoft Testing Platform runner. See the workspace-level [TESTING.md](../TESTING.md) for the runner-flag caveats and the coverage rationale.
+`Infrastructure.Tests.Unit` sets `<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>`, so both `dotnet test` (used by CI) and the compiled `.exe` (preferred locally for `-showLiveOutput`) route through the xUnit v3 Microsoft Testing Platform runner. See the workspace-level [TESTING.md](../TESTING.md) for the runner-flag caveats and the coverage rationale.
 
 ## Running Tests Locally
 
 No Azure credentials required — all tests are unit tests.
 
 ```powershell
-dotnet build Infrastructure.Tests --configuration Debug
-.\Infrastructure.Tests\bin\Debug\net10.0\Infrastructure.Tests.exe -trait "Category=Unit" -showLiveOutput
+dotnet build Infrastructure.Tests.Unit --configuration Debug
+.\Infrastructure.Tests.Unit\bin\Debug\net10.0\Infrastructure.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
 ```
 
 ---
@@ -106,11 +106,11 @@ via `coverlet.console` pinned in `dotnet-tools.json` — restore with `dotnet to
 workspace `TESTING.md` for the rationale). Infrastructure is unit-only in CI, so OpenCover is the only report.
 
 ```powershell
-dotnet build Infrastructure.Tests --configuration Release
+dotnet build Infrastructure.Tests.Unit --configuration Release
 dotnet tool restore
-dotnet coverlet Infrastructure.Tests\bin\Release\net10.0 `
+dotnet coverlet Infrastructure.Tests.Unit\bin\Release\net10.0 `
   --target "dotnet" `
-  --targetargs "test --project Infrastructure.Tests --no-build --configuration Release -- --filter-trait Category=Unit" `
+  --targetargs "test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit" `
   --format opencover --output "coverage.opencover.xml" `
   --skipautoprops --exclude-by-attribute GeneratedCodeAttribute `
   --exclude-by-file "**/obj/**" --exclude-by-file "**/Program.cs" `
@@ -121,7 +121,7 @@ $env:SONAR_TOKEN = "<token>"
   "-Dsonar.projectKey=crgolden_Infrastructure" `
   "-Dsonar.organization=crgolden" `
   "-Dsonar.sources=Infrastructure" `
-  "-Dsonar.tests=Infrastructure.Tests" `
+  "-Dsonar.tests=Infrastructure.Tests.Unit" `
   "-Dsonar.exclusions=**/bin/**,**/obj/**" `
   "-Dsonar.cs.opencover.reportsPaths=coverage.opencover.xml"
 ```
