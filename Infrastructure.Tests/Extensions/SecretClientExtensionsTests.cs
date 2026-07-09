@@ -9,7 +9,7 @@ using Moq;
 public sealed class SecretClientExtensionsTests
 {
     [Fact]
-    public void GetInfrastructureSecrets_ReturnsTupleWithAllElevenSecretValues()
+    public void GetInfrastructureSecrets_ReturnsTupleWithAllThirteenSecretValues()
     {
         var values = new Dictionary<string, string>
         {
@@ -21,6 +21,8 @@ public sealed class SecretClientExtensionsTests
             ["RedisPassword"] = "redis-pass",
             ["MongoDbUsername"] = "mongo-user",
             ["MongoDbPassword"] = "mongo-pass",
+            ["PostgreSqlUserId"] = "postgres-user",
+            ["PostgreSqlPassword"] = "postgres-pass",
             ["AdminEmail"] = "admin@example.com",
             ["InfrastructureClientId"] = "client-id",
             ["InfrastructureClientSecret"] = "client-secret",
@@ -39,6 +41,8 @@ public sealed class SecretClientExtensionsTests
         Assert.Equal("redis-pass", secrets.RedisPassword.Value);
         Assert.Equal("mongo-user", secrets.MongoDbUsername.Value);
         Assert.Equal("mongo-pass", secrets.MongoDbPassword.Value);
+        Assert.Equal("postgres-user", secrets.PostgreSqlUserId.Value);
+        Assert.Equal("postgres-pass", secrets.PostgreSqlPassword.Value);
         Assert.Equal("admin@example.com", secrets.AdminEmail.Value);
         Assert.Equal("client-id", secrets.InfrastructureClientId.Value);
         Assert.Equal("client-secret", secrets.InfrastructureClientSecret.Value);

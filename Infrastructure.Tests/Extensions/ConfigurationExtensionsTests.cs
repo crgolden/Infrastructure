@@ -25,7 +25,7 @@ public sealed class ConfigurationExtensionsTests
     }
 
     [Fact]
-    public void GetInfrastructureSecrets_ReturnsAllTwelveCredentials()
+    public void GetInfrastructureSecrets_ReturnsAllFourteenCredentials()
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -38,6 +38,8 @@ public sealed class ConfigurationExtensionsTests
                 ["RedisPassword"] = "redis-pass",
                 ["MongoDbUsername"] = "mongo-user",
                 ["MongoDbPassword"] = "mongo-pass",
+                ["PostgreSqlUserId"] = "postgres-user",
+                ["PostgreSqlPassword"] = "postgres-pass",
                 ["AdminEmail"] = "admin@example.com",
                 ["ServiceBusConnectionString"] = "Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=k;SharedAccessKey=v",
                 ["InfrastructureClientId"] = "client-id",
@@ -55,6 +57,8 @@ public sealed class ConfigurationExtensionsTests
         Assert.Equal("redis-pass", secrets.RedisPassword);
         Assert.Equal("mongo-user", secrets.MongoDbUsername);
         Assert.Equal("mongo-pass", secrets.MongoDbPassword);
+        Assert.Equal("postgres-user", secrets.PostgreSqlUserId);
+        Assert.Equal("postgres-pass", secrets.PostgreSqlPassword);
         Assert.Equal("admin@example.com", secrets.AdminEmail);
         Assert.Equal("Endpoint=sb://test.servicebus.windows.net/;SharedAccessKeyName=k;SharedAccessKey=v", secrets.ServiceBusConnectionString);
         Assert.Equal("client-id", secrets.InfrastructureClientId);

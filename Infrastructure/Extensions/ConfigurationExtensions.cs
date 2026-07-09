@@ -20,6 +20,8 @@ public static class ConfigurationExtensions
             string RedisPassword,
             string MongoDbUsername,
             string MongoDbPassword,
+            string PostgreSqlUserId,
+            string PostgreSqlPassword,
             string AdminEmail,
             string ServiceBusConnectionString,
             string InfrastructureClientId,
@@ -34,6 +36,8 @@ public static class ConfigurationExtensions
             var redisPassword = configuration.GetRequired<string>("RedisPassword");
             var mongoDbUsername = configuration.GetRequired<string>("MongoDbUsername");
             var mongoDbPassword = configuration.GetRequired<string>("MongoDbPassword");
+            var postgreSqlUserId = configuration.GetRequired<string>("PostgreSqlUserId");
+            var postgreSqlPassword = configuration.GetRequired<string>("PostgreSqlPassword");
             var adminEmail = configuration.GetRequired<string>("AdminEmail");
             var serviceBusConnectionString = configuration.GetRequired<string>("ServiceBusConnectionString");
             var infrastructureClientId = configuration.GetRequired<string>("InfrastructureClientId");
@@ -47,6 +51,8 @@ public static class ConfigurationExtensions
                 redisPassword,
                 mongoDbUsername,
                 mongoDbPassword,
+                postgreSqlUserId,
+                postgreSqlPassword,
                 adminEmail,
                 serviceBusConnectionString,
                 infrastructureClientId,

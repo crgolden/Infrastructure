@@ -26,6 +26,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
+using Npgsql;
 using OpenTelemetry.Instrumentation.AspNetCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -43,8 +44,10 @@ try
     var oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
     IConfigurationSection monitoringOptionsSection = builder.Configuration.GetRequiredSection(nameof(MonitoringOptions)),
         serviceEndpointOptionsSection = builder.Configuration.GetRequiredSection(nameof(ServiceEndpointOptions)),
-        sqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(SqlConnectionStringBuilder));
+        sqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(SqlConnectionStringBuilder)),
+        postgreSqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(NpgsqlConnectionStringBuilder));
     var sqlConnectionStringBuilder = sqlConnectionStringBuilderSection.Get<SqlConnectionStringBuilder>() ?? throw new InvalidOperationException($"Invalid '{nameof(SqlConnectionStringBuilder)}' configuration.");
+    var postgreSqlConnectionStringBuilder = postgreSqlConnectionStringBuilderSection.Get<NpgsqlConnectionStringBuilder>() ?? throw new InvalidOperationException($"Invalid '{nameof(NpgsqlConnectionStringBuilder)}' configuration.");
     var redisHost = builder.Configuration.GetRequired<string>("RedisHost");
     var redisPort = builder.Configuration.GetRequired<int>("RedisPort");
     var redisSsl = builder.Configuration.GetRequired<bool>("RedisSsl");
@@ -86,6 +89,8 @@ try
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword.Value;
         configurationOptions.Password = secrets.RedisPassword.Value;
         mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, secrets.MongoDbUsername.Value, secrets.MongoDbPassword.Value);
+        postgreSqlConnectionStringBuilder.Username = secrets.PostgreSqlUserId.Value;
+        postgreSqlConnectionStringBuilder.Password = secrets.PostgreSqlPassword.Value;
         builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options => options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) && !context.Request.Path.StartsWithSegments("/ping", StringComparison.OrdinalIgnoreCase));
         builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
         {
@@ -160,6 +165,8 @@ try
         sqlConnectionStringBuilder.Password = secrets.SqlServerPassword;
         configurationOptions.Password = secrets.RedisPassword;
         mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, secrets.MongoDbUsername, secrets.MongoDbPassword);
+        postgreSqlConnectionStringBuilder.Username = secrets.PostgreSqlUserId;
+        postgreSqlConnectionStringBuilder.Password = secrets.PostgreSqlPassword;
         builder.Services
             .AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
                 .ReadFrom.Configuration(builder.Configuration)
@@ -199,6 +206,7 @@ try
         .AddHttpClient<ChurchesHealthCheck>().Services
         .AddHttpClient<DirectoryHealthCheck>().Services
         .AddTransient<Func<IDbConnection>>(_ => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
+        .AddKeyedTransient<Func<IDbConnection>>("PostgreSql", (_, _) => () => new NpgsqlConnection(postgreSqlConnectionStringBuilder.ConnectionString))
         .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
         .AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings))
         .AddTransient<Func<TcpClient>>(_ => () => new TcpClient())
@@ -216,6 +224,7 @@ try
         .AddCheck<WMSvcHealthCheck>("WMSvc", tags: ["service"])
         .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])
         .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
+        .AddCheck<PostgreSqlHealthCheck>("PostgreSQL", tags: ["database"])
         .AddCheck<IdentityHealthCheck>("Identity", tags: ["service"])
         .AddCheck<ManualsHealthCheck>("Manuals", tags: ["service"])
         .AddCheck<InventoryHealthCheck>("Inventory", tags: ["service"])

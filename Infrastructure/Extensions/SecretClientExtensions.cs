@@ -16,6 +16,8 @@ public static class SecretClientExtensions
             KeyVaultSecret RedisPassword,
             KeyVaultSecret MongoDbUsername,
             KeyVaultSecret MongoDbPassword,
+            KeyVaultSecret PostgreSqlUserId,
+            KeyVaultSecret PostgreSqlPassword,
             KeyVaultSecret AdminEmail,
             KeyVaultSecret InfrastructureClientId,
             KeyVaultSecret InfrastructureClientSecret
@@ -29,6 +31,8 @@ public static class SecretClientExtensions
             var redisPassword = secretClient.GetSecret("RedisPassword");
             var mongoDbUsername = secretClient.GetSecret("MongoDbUsername");
             var mongoDbPassword = secretClient.GetSecret("MongoDbPassword");
+            var postgreSqlUserId = secretClient.GetSecret("PostgreSqlUserId");
+            var postgreSqlPassword = secretClient.GetSecret("PostgreSqlPassword");
             var adminEmail = secretClient.GetSecret("AdminEmail");
             var infrastructureClientId = secretClient.GetSecret("InfrastructureClientId");
             var infrastructureClientSecret = secretClient.GetSecret("InfrastructureClientSecret");
@@ -41,6 +45,8 @@ public static class SecretClientExtensions
                 redisPassword.Value,
                 mongoDbUsername.Value,
                 mongoDbPassword.Value,
+                postgreSqlUserId.Value,
+                postgreSqlPassword.Value,
                 adminEmail.Value,
                 infrastructureClientId.Value,
                 infrastructureClientSecret.Value
