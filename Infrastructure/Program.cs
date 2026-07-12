@@ -205,6 +205,7 @@ try
         .AddHttpClient<ProductsHealthCheck>().Services
         .AddHttpClient<ChurchesHealthCheck>().Services
         .AddHttpClient<DirectoryHealthCheck>().Services
+        .AddHttpClient<CuratorHealthCheck>().Services
         .AddTransient<Func<IDbConnection>>(_ => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
         .AddKeyedTransient<Func<IDbConnection>>("PostgreSql", (_, _) => () => new NpgsqlConnection(postgreSqlConnectionStringBuilder.ConnectionString))
         .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
@@ -230,7 +231,8 @@ try
         .AddCheck<InventoryHealthCheck>("Inventory", tags: ["service"])
         .AddCheck<ProductsHealthCheck>("Products", tags: ["service"])
         .AddCheck<ChurchesHealthCheck>("Churches", tags: ["service"])
-        .AddCheck<DirectoryHealthCheck>("Directory", tags: ["service"]).Services
+        .AddCheck<DirectoryHealthCheck>("Directory", tags: ["service"])
+        .AddCheck<CuratorHealthCheck>("Curator", tags: ["service"]).Services
         .AddSignalR()
         .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())).Services
         .AddSingleton<IAlertService, AlertService>()

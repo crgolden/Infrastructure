@@ -44,6 +44,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `ProductsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `ChurchesHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `DirectoryHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
+| `CuratorHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
 | `RedisHealthCheckTests` | `IConnectionMultiplexer` | `PING` command |
 | `SqlServerHealthCheckTests` | `Func<SqlConnection>` | `SELECT 1` |
 | `YawcamHealthCheckTests` | `Func<TcpClient>` | TCP connect `:5995` |
