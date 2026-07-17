@@ -36,6 +36,7 @@ Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks 
 | Grafana Alloy | TCP connect | `ServiceEndpointOptions:AlloyHost` / `:AlloyPort` |
 | Yawcam AI | TCP connect | `ServiceEndpointOptions:YawcamHost` / `:YawcamPort` |
 | WMSvc | TCP connect | `ServiceEndpointOptions:WmsvcHost` / `:WmsvcPort` |
+| Kafka | TCP connect | `ServiceEndpointOptions:KafkaHost` / `:KafkaPort` |
 | Redis | `PING` via `IConnectionMultiplexer` | `RedisHost` / `RedisPort` / `RedisSsl` |
 | MongoDB | `ping` command via `IMongoClient` | `MongoServerHost` / `MongoServerPort` / `MongoUseTls` |
 | [Identity](https://github.com/crgolden/Identity) | HTTP GET `/health`, body `Healthy` | `OidcAuthority` |
@@ -89,6 +90,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `ServiceEndpointOptions:AlloyHost` / `:AlloyPort` | Host/port for the Grafana Alloy TCP check |
 | `ServiceEndpointOptions:YawcamHost` / `:YawcamPort` | Host/port for the Yawcam TCP check |
 | `ServiceEndpointOptions:WmsvcHost` / `:WmsvcPort` | Host/port for the WMSvc TCP check |
+| `ServiceEndpointOptions:KafkaHost` / `:KafkaPort` | Host/port for the Kafka broker TCP check |
 | `SqlConnectionStringBuilder:DataSource` | SQL Server host |
 | `SqlConnectionStringBuilder:InitialCatalog` | Database name (default `master`) |
 | `RedisHost` / `RedisPort` / `RedisSsl` | Redis endpoint and TLS flag |
@@ -188,4 +190,4 @@ The GitHub Actions workflow triggers on pushes to `main` and pull requests.
 **Deploy job** — runs after a successful build on `main`:
 1. Deploys the web app to **Azure App Service** `crgolden-infrastructure` (Production slot) via Azure OIDC
 
-> **Firewall note:** Each monitored TCP/HTTP port on the host (SQL `1433`, Elasticsearch `9200`, Kibana `5601`, Plex `32400`, Yawcam `5995`, WMSvc `8172`, Redis `6379`, MongoDB `27017`, plus the configured IIS/Home Assistant/Uptime Kuma/Grafana/Alloy endpoints) must allow inbound traffic from the Azure App Service outbound IPs. Update any rules scoped to specific IPs or the local subnet accordingly.
+> **Firewall note:** Each monitored TCP/HTTP port on the host (SQL `1433`, Elasticsearch `9200`, Kibana `5601`, Plex `32400`, Yawcam `5995`, WMSvc `8172`, Kafka `9093`, Redis `6379`, MongoDB `27017`, plus the configured IIS/Home Assistant/Uptime Kuma/Grafana/Alloy endpoints) must allow inbound traffic from the Azure App Service outbound IPs. Update any rules scoped to specific IPs or the local subnet accordingly.

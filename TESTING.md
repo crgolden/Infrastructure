@@ -49,6 +49,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `SqlServerHealthCheckTests` | `Func<SqlConnection>` | `SELECT 1` |
 | `YawcamHealthCheckTests` | `Func<TcpClient>` | TCP connect `:5995` |
 | `WMSvcHealthCheckTests` | `Func<TcpClient>` | TCP connect `:8172` |
+| `KafkaHealthCheckTests` | `Func<TcpClient>` | TCP connect `:9093` |
 | `HomeAssistantHealthCheckTests` | `IHttpClientFactory` | `GET /` → HTTP 200 |
 | `UptimeKumaHealthCheckTests` | `IHttpClientFactory` | `GET /` → HTTP 200 |
 | `GrafanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/health` → HTTP 200 |

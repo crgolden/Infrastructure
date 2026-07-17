@@ -223,6 +223,7 @@ try
         .AddCheck<AlloyHealthCheck>("Alloy", tags: ["monitoring"])
         .AddCheck<YawcamHealthCheck>("Yawcam AI", tags: ["surveillance"])
         .AddCheck<WMSvcHealthCheck>("WMSvc", tags: ["service"])
+        .AddCheck<KafkaHealthCheck>("Kafka", tags: ["messaging"])
         .AddCheck<RedisHealthCheck>("Redis", tags: ["cache"])
         .AddCheck<MongoDbHealthCheck>("MongoDB", tags: ["database"])
         .AddCheck<PostgreSqlHealthCheck>("PostgreSQL", tags: ["database"])
