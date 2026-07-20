@@ -18,6 +18,8 @@ Infrastructure is the **observability surface** for the `crgolden` service fleet
 | [Products](https://github.com/crgolden/Products) | OData v4 product catalog API | `ProductsApiAddress` |
 | [Churches](https://github.com/crgolden/Churches) | Church discovery Angular SSR + Node (Express) BFF | `ChurchesServerAddress` |
 | [Directory](https://github.com/crgolden/Directory) | Church directory API | `DirectoryApiAddress` |
+| [Curator](https://github.com/crgolden/Curator) | PlayStation game-curation API | `CuratorApiAddress` |
+| [Librarian](https://github.com/crgolden/Librarian) | Curator UI Angular SSR + Node (Express) BFF | `LibrarianServerAddress` |
 
 ## Services Monitored
 
@@ -45,6 +47,8 @@ Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks 
 | [Products](https://github.com/crgolden/Products) | HTTP GET `/health`, body `Healthy` | `ProductsApiAddress` |
 | [Churches](https://github.com/crgolden/Churches) | HTTP GET `/health`, body `Healthy` | `ChurchesServerAddress` |
 | [Directory](https://github.com/crgolden/Directory) | HTTP GET `/health`, body `Healthy` | `DirectoryApiAddress` |
+| [Curator](https://github.com/crgolden/Curator) | HTTP GET `/health`, body `Healthy` | `CuratorApiAddress` |
+| [Librarian](https://github.com/crgolden/Librarian) | HTTP GET `/health`, body `Healthy` | `LibrarianServerAddress` |
 
 Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30). When a service transitions from `Healthy` (or `Unknown`) to `Unhealthy`, an alert message is published to the Azure Service Bus `email` queue; a recovery message is sent when it returns to `Healthy`. `Degraded` does not trigger an email.
 
@@ -101,6 +105,8 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `ProductsApiAddress` | Products base URL (`/health` target) |
 | `ChurchesServerAddress` | Churches base URL (`/health` target) |
 | `DirectoryApiAddress` | Directory base URL (`/health` target) |
+| `CuratorApiAddress` | Curator base URL (`/health` target) |
+| `LibrarianServerAddress` | Librarian base URL (`/health` target) |
 
 > The alert recipient (`AlertOptions.RecipientEmail`) is **not** a config key — it is bound from the `AdminEmail` secret at startup.
 
@@ -159,7 +165,7 @@ Infrastructure.Tests.Unit/  # xUnit v3 unit tests (Moq)
 
 Key components inside `Infrastructure/`:
 
-- `HealthChecks/` — one `IHealthCheck` per monitored service; the six sibling-app checks extend `SiblingAppHealthCheck`.
+- `HealthChecks/` — one `IHealthCheck` per monitored service; the eight sibling-app checks extend `SiblingAppHealthCheck`.
 - `Services/HealthMonitorService` — `BackgroundService` poll loop that stores the latest snapshot, broadcasts it over SignalR, and triggers alerts on status transitions.
 - `Services/AlertService` — publishes alert/recovery emails to the Azure Service Bus `email` queue.
 - `Services/KeepaliveService` — `BackgroundService` that self-pings `/ping` every 10 minutes when `WEBSITE_HOSTNAME` is set.
