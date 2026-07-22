@@ -69,14 +69,14 @@ Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30).
 | Tool | Notes |
 |---|---|
 | .NET 10 SDK | |
-| Azure Key Vault | Holds the secrets listed below; used in **production only** — non-production reads the same values from User Secrets / environment variables |
+| Azure Key Vault | Backs the secrets listed below in production, as Key Vault-referenced App Service settings the platform resolves into configuration at startup — non-production reads the same config keys from User Secrets / environment variables |
 | Azure Service Bus namespace | With an `email` queue for outbound alert messages |
 
 ## Getting Started
 
 ### 1. Configure User Secrets
 
-All `null` values in `appsettings.json` must be supplied via **User Secrets** (development) or environment variables (CI) or Azure Key Vault (production). In non-production, `DefaultAzureCredential` is never constructed — all config comes from User Secrets or env vars.
+All `null` values in `appsettings.json` must be supplied via **User Secrets** (development), environment variables (CI), or Key Vault-referenced App Service settings (production) — the app reads every one of them the same way, via `IConfiguration.GetRequired<T>()`, regardless of environment. In non-production, `DefaultAzureCredential` is never constructed — all config comes from User Secrets or env vars.
 
 **Non-secret values (User Secrets / environment / `appsettings.json`):**
 
@@ -114,7 +114,6 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 
 | Key | Description |
 |---|---|
-| `KeyVaultUri` | Azure Key Vault URI (secrets fetched at startup) |
 | `ElasticsearchNode` | Elasticsearch node URI (Serilog sink) |
 | `BlobUri` | Azure Blob Storage URI for Data Protection keys |
 | `DataProtectionKeyIdentifier` | Azure Key Vault key URI for Data Protection |
@@ -124,22 +123,23 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `WEBSITE_HOSTNAME` | Host (set by Azure; used by `KeepaliveService` to self-ping `/ping`) |
 | `DefaultAzureCredentialOptions` | `DefaultAzureCredential` chain options |
 
-**Secrets:** Production fetches these from **Azure Key Vault**; non-production reads them from **User Secrets / environment variables**. Note that the two SQL Server key names differ between the sources.
+**Secrets:** in production, every one of these is an App Service setting holding a `@Microsoft.KeyVault(SecretUri=...)` reference that the platform resolves into configuration at startup under the same key name; non-production reads them from **User Secrets / environment variables**. There is no code-level distinction between the two — both are plain `IConfiguration` reads.
 
-| Key Vault secret | User Secrets / env key | Description |
-|---|---|---|
-| `ElasticsearchUsername` | `ElasticsearchUsername` | Elasticsearch user (Serilog sink + ES/Kibana checks) |
-| `ElasticsearchPassword` | `ElasticsearchPassword` | Elasticsearch password |
-| `ResendApiToken` | `ResendApiToken` | Resend API token |
-| `MasterSqlServerUserId` | `SqlServerUserId` | SQL Server login |
-| `MasterSqlServerPassword` | `SqlServerPassword` | SQL Server password |
-| `RedisPassword` | `RedisPassword` | Redis `AUTH` password |
-| `MongoDbUsername` | `MongoDbUsername` | MongoDB username |
-| `MongoDbPassword` | `MongoDbPassword` | MongoDB password |
-| `AdminEmail` | `AdminEmail` | Alert recipient email address |
-| `InfrastructureClientId` | `InfrastructureClientId` | OIDC client ID |
-| `InfrastructureClientSecret` | `InfrastructureClientSecret` | OIDC client secret |
-| — | `ServiceBusConnectionString` | Service Bus connection string (non-production only) |
+| Key | Description |
+|---|---|
+| `ElasticsearchUsername` | Elasticsearch user (Serilog sink + ES/Kibana checks) |
+| `ElasticsearchPassword` | Elasticsearch password |
+| `SqlConnectionStringBuilder:UserID` | SQL Server login |
+| `SqlConnectionStringBuilder:Password` | SQL Server password |
+| `RedisPassword` | Redis `AUTH` password |
+| `MongoDbUsername` | MongoDB username |
+| `MongoDbPassword` | MongoDB password |
+| `PostgreSqlUserId` | PostgreSQL login |
+| `PostgreSqlPassword` | PostgreSQL password |
+| `AdminEmail` | Alert recipient email address |
+| `InfrastructureClientId` | OIDC client ID |
+| `InfrastructureClientSecret` | OIDC client secret |
+| `ServiceBusConnectionString` | Service Bus connection string (non-production only) |
 
 ### 2. Run
 

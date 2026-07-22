@@ -81,13 +81,6 @@ One test class per health check. Each check accepts its external dependency via 
 |-------|---------------|
 | `StatusControllerTests` | `StatusController` — returns the current `HealthSnapshot` from `IHealthMonitorService`, or `503` when none yet |
 
-### `Extensions/`
-
-| Class | What it tests |
-|-------|---------------|
-| `ConfigurationExtensionsTests` | `GetRequired<T>` (value / throw-on-missing) and `GetInfrastructureSecrets` — the non-production secret tuple read from `IConfiguration` |
-| `SecretClientExtensionsTests` | `GetInfrastructureSecrets` — the production secret tuple read from a mocked `SecretClient` (Key Vault names, e.g. `MasterSqlServerUserId`) |
-
 ---
 
 ## CI pipeline

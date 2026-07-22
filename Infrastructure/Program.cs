@@ -6,7 +6,6 @@ using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text.Json.Serialization;
 using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
 using Elastic.Ingest.Elasticsearch;
 using Elastic.Ingest.Elasticsearch.DataStreams;
 using Elastic.Serilog.Sinks;
@@ -40,7 +39,11 @@ Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    string elasticsearchUsername, elasticsearchPassword, adminEmail, infrastructureClientId, infrastructureClientSecret;
+    string elasticsearchUsername = builder.Configuration.GetRequired<string>("ElasticsearchUsername"),
+        elasticsearchPassword = builder.Configuration.GetRequired<string>("ElasticsearchPassword"),
+        adminEmail = builder.Configuration.GetRequired<string>("AdminEmail"),
+        infrastructureClientId = builder.Configuration.GetRequired<string>("InfrastructureClientId"),
+        infrastructureClientSecret = builder.Configuration.GetRequired<string>("InfrastructureClientSecret");
     var oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
     IConfigurationSection monitoringOptionsSection = builder.Configuration.GetRequiredSection(nameof(MonitoringOptions)),
         serviceEndpointOptionsSection = builder.Configuration.GetRequiredSection(nameof(ServiceEndpointOptions)),
@@ -58,6 +61,7 @@ try
         EndPoints = [redisEndpoint],
         AbortOnConnectFail = false
     };
+    configurationOptions.Password = builder.Configuration.GetRequired<string>("RedisPassword");
     string mongoDatabaseName = builder.Configuration.GetRequired<string>("MongoDatabaseName"),
         mongoServerHost = builder.Configuration.GetRequired<string>("MongoServerHost");
     var mongoServerPort = builder.Configuration.GetRequired<int>("MongoServerPort");
@@ -67,6 +71,11 @@ try
         Server = new MongoServerAddress(mongoServerHost, mongoServerPort),
         UseTls = mongoUseTls
     };
+    var mongoDbUsername = builder.Configuration.GetRequired<string>("MongoDbUsername");
+    var mongoDbPassword = builder.Configuration.GetRequired<string>("MongoDbPassword");
+    mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, mongoDbUsername, mongoDbPassword);
+    postgreSqlConnectionStringBuilder.Username = builder.Configuration.GetRequired<string>("PostgreSqlUserId");
+    postgreSqlConnectionStringBuilder.Password = builder.Configuration.GetRequired<string>("PostgreSqlPassword");
     if (builder.Environment.IsProduction())
     {
         var defaultAzureCredentialOptionsSection = builder.Configuration.GetRequiredSection(nameof(DefaultAzureCredentialOptions));
@@ -74,23 +83,9 @@ try
         var tokenCredential = new DefaultAzureCredential(defaultAzureCredentialOptions);
         Uri blobUri = builder.Configuration.GetRequired<Uri>("BlobUri"),
             dataProtectionKeyIdentifier = builder.Configuration.GetRequired<Uri>("DataProtectionKeyIdentifier"),
-            elasticsearchNode = builder.Configuration.GetRequired<Uri>("ElasticsearchNode"),
-            keyVaultUrl = builder.Configuration.GetRequired<Uri>("KeyVaultUri");
+            elasticsearchNode = builder.Configuration.GetRequired<Uri>("ElasticsearchNode");
         string applicationName = builder.Configuration.GetRequired<string>("WEBSITE_SITE_NAME"),
             serviceBusNamespace = builder.Configuration.GetRequired<string>("ServiceBusNamespace");
-        var secretClient = new SecretClient(keyVaultUrl, tokenCredential);
-        var secrets = secretClient.GetInfrastructureSecrets();
-        elasticsearchUsername = secrets.ElasticsearchUsername.Value;
-        elasticsearchPassword = secrets.ElasticsearchPassword.Value;
-        adminEmail = secrets.AdminEmail.Value;
-        infrastructureClientId = secrets.InfrastructureClientId.Value;
-        infrastructureClientSecret = secrets.InfrastructureClientSecret.Value;
-        sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId.Value;
-        sqlConnectionStringBuilder.Password = secrets.SqlServerPassword.Value;
-        configurationOptions.Password = secrets.RedisPassword.Value;
-        mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, secrets.MongoDbUsername.Value, secrets.MongoDbPassword.Value);
-        postgreSqlConnectionStringBuilder.Username = secrets.PostgreSqlUserId.Value;
-        postgreSqlConnectionStringBuilder.Password = secrets.PostgreSqlPassword.Value;
         builder.Services.Configure<AspNetCoreTraceInstrumentationOptions>(options => options.Filter = context => !context.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase) && !context.Request.Path.StartsWithSegments("/ping", StringComparison.OrdinalIgnoreCase));
         builder.Logging.AddOpenTelemetry(openTelemetryLoggerOptions =>
         {
@@ -117,7 +112,7 @@ try
                     },
                     transportConfiguration =>
                     {
-                        var header = new BasicAuthentication(secrets.ElasticsearchUsername.Value, secrets.ElasticsearchPassword.Value);
+                        var header = new BasicAuthentication(elasticsearchUsername, elasticsearchPassword);
                         transportConfiguration.Authentication(header);
                     }))
             .AddOpenTelemetry()
@@ -155,18 +150,7 @@ try
             builder.Configuration.AddUserSecrets("aspnet-Infrastructure-3f7a2c1b-8e4d-4b9f-a6c3-2d1e5f8b9a0c");
         }
 
-        var secrets = builder.Configuration.GetInfrastructureSecrets();
-        elasticsearchUsername = secrets.ElasticsearchUsername;
-        elasticsearchPassword = secrets.ElasticsearchPassword;
-        adminEmail = secrets.AdminEmail;
-        infrastructureClientId = secrets.InfrastructureClientId;
-        infrastructureClientSecret = secrets.InfrastructureClientSecret;
-        sqlConnectionStringBuilder.UserID = secrets.SqlServerUserId;
-        sqlConnectionStringBuilder.Password = secrets.SqlServerPassword;
-        configurationOptions.Password = secrets.RedisPassword;
-        mongoSettings.Credential = MongoCredential.CreateCredential(mongoDatabaseName, secrets.MongoDbUsername, secrets.MongoDbPassword);
-        postgreSqlConnectionStringBuilder.Username = secrets.PostgreSqlUserId;
-        postgreSqlConnectionStringBuilder.Password = secrets.PostgreSqlPassword;
+        var serviceBusConnectionString = builder.Configuration.GetRequired<string>("ServiceBusConnectionString");
         builder.Services
             .AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
                 .ReadFrom.Configuration(builder.Configuration)
@@ -175,7 +159,7 @@ try
             .UseEphemeralDataProtectionProvider().Services
             .AddAzureClients(azureClientFactoryBuilder =>
             {
-                azureClientFactoryBuilder.AddServiceBusClient(secrets.ServiceBusConnectionString).WithName("crgolden");
+                azureClientFactoryBuilder.AddServiceBusClient(serviceBusConnectionString).WithName("crgolden");
             });
     }
 

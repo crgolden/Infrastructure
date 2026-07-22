@@ -9,56 +9,5 @@ public static class ConfigurationExtensions
         {
             return configuration.GetValue<T?>(key) ?? throw new InvalidOperationException($"Invalid '{key}'.");
         }
-
-#pragma warning disable SA1009
-        internal (
-            string ElasticsearchUsername,
-            string ElasticsearchPassword,
-            string ResendApiToken,
-            string SqlServerUserId,
-            string SqlServerPassword,
-            string RedisPassword,
-            string MongoDbUsername,
-            string MongoDbPassword,
-            string PostgreSqlUserId,
-            string PostgreSqlPassword,
-            string AdminEmail,
-            string ServiceBusConnectionString,
-            string InfrastructureClientId,
-            string InfrastructureClientSecret
-        ) GetInfrastructureSecrets()
-        {
-            var elasticsearchUsername = configuration.GetRequired<string>("ElasticsearchUsername");
-            var elasticsearchPassword = configuration.GetRequired<string>("ElasticsearchPassword");
-            var resendApiToken = configuration.GetRequired<string>("ResendApiToken");
-            var sqlServerUserId = configuration.GetRequired<string>("SqlServerUserId");
-            var sqlServerPassword = configuration.GetRequired<string>("SqlServerPassword");
-            var redisPassword = configuration.GetRequired<string>("RedisPassword");
-            var mongoDbUsername = configuration.GetRequired<string>("MongoDbUsername");
-            var mongoDbPassword = configuration.GetRequired<string>("MongoDbPassword");
-            var postgreSqlUserId = configuration.GetRequired<string>("PostgreSqlUserId");
-            var postgreSqlPassword = configuration.GetRequired<string>("PostgreSqlPassword");
-            var adminEmail = configuration.GetRequired<string>("AdminEmail");
-            var serviceBusConnectionString = configuration.GetRequired<string>("ServiceBusConnectionString");
-            var infrastructureClientId = configuration.GetRequired<string>("InfrastructureClientId");
-            var infrastructureClientSecret = configuration.GetRequired<string>("InfrastructureClientSecret");
-            return (
-                elasticsearchUsername,
-                elasticsearchPassword,
-                resendApiToken,
-                sqlServerUserId,
-                sqlServerPassword,
-                redisPassword,
-                mongoDbUsername,
-                mongoDbPassword,
-                postgreSqlUserId,
-                postgreSqlPassword,
-                adminEmail,
-                serviceBusConnectionString,
-                infrastructureClientId,
-                infrastructureClientSecret
-            );
-        }
-#pragma warning restore SA1009
     }
 }
