@@ -27,8 +27,4 @@ public sealed class ServiceEndpointOptions
     public string? WmsvcHost { get; set; }
 
     public int? WmsvcPort { get; set; }
-
-    public string? KafkaHost { get; set; }
-
-    public int? KafkaPort { get; set; }
 }
