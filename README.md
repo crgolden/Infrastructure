@@ -29,6 +29,7 @@ Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks 
 |---|---|---|
 | IIS HTTPS | HTTP GET | `ServiceEndpointOptions:IisHttps` |
 | SQL Server | `SELECT 1` via `SqlConnection` | `SqlConnectionStringBuilder` |
+| PostgreSQL | `SELECT 1` via `NpgsqlConnection` | `NpgsqlConnectionStringBuilder` |
 | Elasticsearch | HTTP GET `/_cluster/health` (Basic auth) | `ServiceEndpointOptions:Elasticsearch` |
 | Kibana | HTTP GET `/api/status` (Basic auth) | `ServiceEndpointOptions:Kibana` |
 | Plex Media Server | HTTP GET `/identity` | `ServiceEndpointOptions:Plex` |
@@ -95,6 +96,8 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `ServiceEndpointOptions:WmsvcHost` / `:WmsvcPort` | Host/port for the WMSvc TCP check |
 | `SqlConnectionStringBuilder:DataSource` | SQL Server host |
 | `SqlConnectionStringBuilder:InitialCatalog` | Database name (default `master`) |
+| `NpgsqlConnectionStringBuilder:Host` | PostgreSQL host |
+| `NpgsqlConnectionStringBuilder:Database` | PostgreSQL database name (default `curator`) |
 | `RedisHost` / `RedisPort` / `RedisSsl` | Redis endpoint and TLS flag |
 | `MongoDatabaseName` | MongoDB auth database (default `crgolden`) |
 | `MongoServerHost` / `MongoServerPort` / `MongoUseTls` | MongoDB endpoint and TLS flag |
@@ -194,4 +197,4 @@ The GitHub Actions workflow triggers on pushes to `main` and pull requests.
 **Deploy job** — runs after a successful build on `main`:
 1. Deploys the web app to **Azure App Service** `crgolden-infrastructure` (Production slot) via Azure OIDC
 
-> **Firewall note:** Each monitored TCP/HTTP port on the host (SQL `1433`, Elasticsearch `9200`, Kibana `5601`, Plex `32400`, Yawcam `5995`, WMSvc `8172`, Redis `6379`, MongoDB `27017`, plus the configured IIS/Home Assistant/Uptime Kuma/Grafana/Alloy endpoints) must allow inbound traffic from the Azure App Service outbound IPs. Update any rules scoped to specific IPs or the local subnet accordingly.
+> **Firewall note:** Every monitored service listens on a host and port supplied through the configuration keys above, and each of those must allow inbound traffic from the deployed app's outbound IP addresses. Any firewall rule scoped to specific IPs or to the local subnet needs updating when those outbound addresses change — a monitored service that is up but unreachable reports `Unhealthy` and triggers an alert exactly as a real outage would.
