@@ -69,7 +69,6 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 
     private async Task PollAsync(CancellationToken cancellationToken)
     {
-        // Suppress the per-poll probe spans (HTTP/SQL calls to every monitored service) — pure App Insights noise; transitions are surfaced via AlertService + SignalR.
         HealthReport report;
         try
         {

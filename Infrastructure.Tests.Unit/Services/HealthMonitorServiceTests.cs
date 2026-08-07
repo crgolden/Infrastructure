@@ -283,7 +283,6 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        // CTS must outlive both polls: poll 1 throws at t=0, delay 1s, poll 2 succeeds at t=1s.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(4));
         _ = svc.StartAsync(cts.Token);
         await Task.Delay(2500, TestContext.Current.CancellationToken);

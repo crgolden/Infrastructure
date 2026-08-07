@@ -1,8 +1,8 @@
 namespace Infrastructure.HealthChecks;
 
-using Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Models;
 
 public sealed class UptimeKumaHealthCheck : IHealthCheck
 {

@@ -26,7 +26,6 @@ public sealed class YawcamHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionRefused_ReturnsUnhealthy()
     {
-        // Connect to a port that should be closed (use loopback with unusual port)
         var options = Options.Create(new ServiceEndpointOptions { YawcamHost = "127.0.0.1", YawcamPort = 19999 });
         Func<TcpClient> factory = () => new TcpClient();
         var check = new YawcamHealthCheck(factory, options);

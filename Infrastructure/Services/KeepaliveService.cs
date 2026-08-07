@@ -34,7 +34,6 @@ public sealed class KeepaliveService : BackgroundService
             await Task.Delay(_interval, stoppingToken);
             try
             {
-                // Suppress the keepalive self-ping dependency span — internal warmup noise, not actionable.
                 using (SuppressInstrumentationScope.Begin())
                 {
                     await _httpClient.GetAsync(_pingUri, stoppingToken);
