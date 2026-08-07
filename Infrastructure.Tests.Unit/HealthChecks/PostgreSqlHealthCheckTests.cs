@@ -23,7 +23,7 @@ public sealed class PostgreSqlHealthCheckTests
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WhenOpenThrows_ReturnsUnhealthyAndDisposesConnection()
+    public async Task CheckHealthAsync_WhenOpenThrowsOnEveryAttempt_ReturnsUnhealthyAfterRetryingOnce()
     {
         var mockConnection = new Mock<IDbConnection>(MockBehavior.Strict);
         mockConnection.Setup(c => c.Open()).Throws(new InvalidOperationException("server unreachable"));
@@ -34,11 +34,12 @@ public sealed class PostgreSqlHealthCheckTests
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Equal("server unreachable", result.Description);
-        mockConnection.Verify(c => c.Dispose(), Times.Once);
+        mockConnection.Verify(c => c.Open(), Times.Exactly(2));
+        mockConnection.Verify(c => c.Dispose(), Times.Exactly(2));
     }
 
     [Fact]
-    public async Task CheckHealthAsync_WhenExecuteScalarThrows_ReturnsUnhealthyAndDisposesBoth()
+    public async Task CheckHealthAsync_WhenExecuteScalarThrowsOnEveryAttempt_ReturnsUnhealthyAfterRetryingOnce()
     {
         var mockCommand = new Mock<IDbCommand>(MockBehavior.Strict);
         mockCommand.SetupSet(c => c.CommandText = "SELECT 1");
@@ -54,8 +55,38 @@ public sealed class PostgreSqlHealthCheckTests
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Equal("permission denied", result.Description);
-        mockCommand.Verify(c => c.Dispose(), Times.Once);
-        mockConnection.Verify(c => c.Dispose(), Times.Once);
+        mockCommand.Verify(c => c.Dispose(), Times.Exactly(2));
+        mockConnection.Verify(c => c.Dispose(), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task CheckHealthAsync_WhenFirstAttemptThrowsAndSecondSucceeds_ReturnsHealthy()
+    {
+        var attempt = 0;
+        var check = new PostgreSqlHealthCheck(() =>
+        {
+            attempt++;
+            if (attempt == 1)
+            {
+                throw new InvalidOperationException("transient network blip");
+            }
+
+            var mockCommand = new Mock<IDbCommand>(MockBehavior.Strict);
+            mockCommand.SetupSet(c => c.CommandText = "SELECT 1");
+            mockCommand.Setup(c => c.ExecuteScalar()).Returns(1);
+            mockCommand.Setup(c => c.Dispose());
+            var mockConnection = new Mock<IDbConnection>(MockBehavior.Strict);
+            mockConnection.Setup(c => c.Open());
+            mockConnection.Setup(c => c.CreateCommand()).Returns(mockCommand.Object);
+            mockConnection.Setup(c => c.Dispose());
+            return mockConnection.Object;
+        });
+
+        var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+
+        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.Equal("Connected", result.Description);
+        Assert.Equal(2, attempt);
     }
 
     [Fact]

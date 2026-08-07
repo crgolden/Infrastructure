@@ -5,6 +5,9 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 public sealed class SqlServerHealthCheck : IHealthCheck
 {
+    private const int MaxAttempts = 2;
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(250);
+
     private readonly Func<IDbConnection> _connectionFactory;
 
     public SqlServerHealthCheck(Func<IDbConnection> connectionFactory)
@@ -14,18 +17,31 @@ public sealed class SqlServerHealthCheck : IHealthCheck
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
     {
-        try
+        Exception lastException;
+        var attempt = 0;
+        do
         {
-            using var connection = _connectionFactory();
-            connection.Open();
-            using var command = connection.CreateCommand();
-            command.CommandText = "SELECT 1";
-            command.ExecuteScalar();
-            return HealthCheckResult.Healthy("Connected");
+            attempt++;
+            try
+            {
+                using var connection = _connectionFactory();
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT 1";
+                command.ExecuteScalar();
+                return HealthCheckResult.Healthy("Connected");
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                if (attempt < MaxAttempts)
+                {
+                    await Task.Delay(RetryDelay, cancellationToken);
+                }
+            }
         }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy(ex.Message, ex);
-        }
+        while (attempt < MaxAttempts);
+
+        return HealthCheckResult.Unhealthy(lastException.Message, lastException);
     }
 }

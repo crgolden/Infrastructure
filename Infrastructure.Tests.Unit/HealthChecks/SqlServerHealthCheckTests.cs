@@ -52,4 +52,34 @@ public sealed class SqlServerHealthCheckTests
         Assert.Equal(HealthStatus.Healthy, result.Status);
         Assert.Equal("Connected", result.Description);
     }
+
+    [Fact]
+    public async Task CheckHealthAsync_WhenFirstAttemptThrowsAndSecondSucceeds_ReturnsHealthy()
+    {
+        var attempt = 0;
+        Func<IDbConnection> factory = () =>
+        {
+            attempt++;
+            if (attempt == 1)
+            {
+                throw new InvalidOperationException("transient network blip");
+            }
+
+            var mockCmd = new Mock<IDbCommand>();
+            mockCmd.SetupSet(c => c.CommandText = It.IsAny<string>());
+            mockCmd.Setup(c => c.ExecuteScalar()).Returns(1);
+            var mockConn = new Mock<IDbConnection>();
+            mockConn.Setup(c => c.Open());
+            mockConn.Setup(c => c.CreateCommand()).Returns(mockCmd.Object);
+            return mockConn.Object;
+        };
+        var check = new SqlServerHealthCheck(factory);
+        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("SQL Server", check, null, null) };
+
+        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+
+        Assert.Equal(HealthStatus.Healthy, result.Status);
+        Assert.Equal("Connected", result.Description);
+        Assert.Equal(2, attempt);
+    }
 }

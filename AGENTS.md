@@ -43,6 +43,14 @@ performs the actual email delivery. This repo never sends mail itself.
 - **Only transitions alert, never steady state.** `Unknown`/`Healthy` → `Unhealthy` sends an alert;
   `Unhealthy` → `Healthy` sends a recovery. `Degraded` sends nothing. Alerting on current status rather
   than on the edge would mail on every poll for the duration of an outage.
+- **`PostgreSqlHealthCheck` and `SqlServerHealthCheck` retry once (250ms delay) before reporting
+  `Unhealthy`.** Diagnosed 2026-08-07: the self-hosted PostgreSQL server and its firewall rule were both
+  confirmed healthy and current, but the server's own log showed zero trace of the failing connection
+  attempts on the days they occurred — the TCP connect (governed by the 30s `Timeout` in
+  `NpgsqlConnectionStringBuilder`/`SqlConnectionStringBuilder`) was being dropped in transit between
+  Azure and the host, not rejected by the database. A single-attempt check turns a rare, self-clearing
+  network blip into a full alert cycle; the retry absorbs that without masking a real outage, since a
+  sustained problem still fails both attempts.
 
 ## Adding a monitored service
 
