@@ -154,7 +154,7 @@ dotnet run
 | Dashboard | `https://localhost:5001/` | Razor page; requires OIDC login |
 | JSON status API | `https://localhost:5001/api/status` | Latest `HealthSnapshot`; requires auth; `503` until the first poll completes |
 | SignalR hub | `https://localhost:5001/hubs/health` | Pushes the `ReceiveSnapshot` message; requires auth |
-| ASP.NET Core health endpoint | `https://localhost:5001/health` | Anonymous; always HTTP 200; JSON body reports each downstream check's status |
+| ASP.NET Core health endpoint | `https://localhost:5001/health` | Anonymous; liveness of *this app only* — body `Healthy`. The monitored services are reported through the dashboard, `/api/status`, and the hub, not here |
 | Keepalive ping | `https://localhost:5001/ping` | Anonymous; returns 200. `KeepaliveService` self-pings this in Azure to avoid cold starts |
 
 ## Project Structure

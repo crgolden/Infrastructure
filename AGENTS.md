@@ -52,6 +52,30 @@ performs the actual email delivery. This repo never sends mail itself.
   network blip into a full alert cycle; the retry absorbs that without masking a real outage, since a
   sustained problem still fails both attempts.
 
+- **A monitored service being down is data, not an Infrastructure fault.** Two consequences, both load-
+  bearing. First, `/health` maps the health-check registry with `Predicate = _ => false`, so it reports
+  only whether *this app* is running — never the aggregate of the fleet it watches. Registering the
+  monitored services in the framework registry is a storage decision; it does not make them dependencies
+  of this app. Second, `Microsoft.Extensions.Diagnostics.HealthChecks` is overridden to `Fatal` in
+  `appsettings.json`, because `DefaultHealthCheckService` logs `HealthCheckEnd` at **Error** for every
+  check that returns `Unhealthy` (and `Warning` for `Degraded`) — one entry per affected service per
+  poll, for as long as that service stays down. `Override` is used rather than a lower `MinimumLevel`
+  because Serilog's minimum level can only suppress events *below* a level, never downgrade an `Error`;
+  and `Override` correctly outranks whatever `MinimumLevel:Default` the deployment environment sets.
+  Every message from that
+  category describes a monitored service, never this app: every one of the 22 registered checks swallows
+  its own exceptions — 14 in the check itself, the 8 sibling checks through `SiblingAppHealthCheck`'s
+  catch-all — so the framework's `HealthCheckError` path is unreachable, and a fault in
+  the poll loop itself surfaces through `HealthMonitorService`'s own `ILogger` instead. Restoring either
+  behaviour re-creates the incident below.
+- **The reason both of the above exist.** Curator was taken down deliberately for E2E work on 2026-08-12.
+  Infrastructure emailed the alert and the recovery exactly as designed — and then, for the 13½ hours in
+  between, emitted an Error-level entry on every poll, which held the Elasticsearch Error/Fatal
+  log-volume alert in Grafana firing for the whole window. A planned single-service outage therefore read
+  as a sustained failure *of the monitoring app*, which is the one thing this app must never
+  misreport. None of those entries carried signal the dashboard, the SignalR feed, and the transition
+  emails don't already carry.
+
 ## Adding a monitored service
 
 1. Add the check under `HealthChecks/`. Extend `SiblingAppHealthCheck` if the target is a sibling app with

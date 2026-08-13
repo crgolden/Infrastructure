@@ -23,7 +23,6 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Driver;
 using Npgsql;
 using OpenTelemetry.Instrumentation.AspNetCore;
@@ -307,15 +306,7 @@ try
     app.UseHttpsRedirection();
     app.UseAuthentication();
     app.UseAuthorization();
-    app.MapHealthChecks("/health", new HealthCheckOptions
-    {
-        ResultStatusCodes =
-        {
-            [HealthStatus.Healthy] = StatusCodes.Status200OK,
-            [HealthStatus.Degraded] = StatusCodes.Status200OK,
-            [HealthStatus.Unhealthy] = StatusCodes.Status200OK,
-        }
-    }).DisableHttpMetrics();
+    app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false }).DisableHttpMetrics();
     app.MapGet("/ping", () => Results.Ok()).DisableHttpMetrics();
     app.MapStaticAssets();
     app.MapControllers();
