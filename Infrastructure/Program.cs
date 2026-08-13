@@ -190,7 +190,7 @@ try
         .AddHttpClient<DirectoryHealthCheck>().Services
         .AddHttpClient<CuratorHealthCheck>().Services
         .AddHttpClient<LibrarianHealthCheck>().Services
-        .AddTransient<Func<IDbConnection>>(_ => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
+        .AddKeyedTransient<Func<IDbConnection>>("SqlServer", (_, _) => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
         .AddKeyedTransient<Func<IDbConnection>>("PostgreSql", (_, _) => () => new NpgsqlConnection(postgreSqlConnectionStringBuilder.ConnectionString))
         .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
         .AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings))

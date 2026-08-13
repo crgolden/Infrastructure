@@ -20,10 +20,18 @@ performs the actual email delivery. This repo never sends mail itself.
   `Func<TcpClient>` for TCP checks, `IConnectionMultiplexer` for Redis, `IMongoClient` for MongoDB,
   `Func<IDbConnection>` for the relational checks. This is the whole reason the suite can use
   `MockBehavior.Strict` with no integration tests.
-- **`PostgreSqlHealthCheck` resolves a *keyed* factory** — `[FromKeyedServices("PostgreSql")]
-  Func<IDbConnection>`, registered via `AddKeyedTransient`. `SqlServerHealthCheck` takes the unkeyed
-  default. Two relational checks share one delegate type, so dropping the key silently points PostgreSQL at
-  SQL Server.
+- **Every `Func<IDbConnection>` is *keyed*, and none is registered unkeyed** — `"SqlServer"` and
+  `"PostgreSql"`, both via `AddKeyedTransient`, each resolved with `[FromKeyedServices]`. Two relational
+  checks share one delegate type, so an unkeyed default is a trap: while one existed, a check that lost
+  its key silently pointed at the *other* database and still reported `Healthy`. With every registration
+  keyed, the same mistake resolves nothing and fails loudly at construction instead — surfacing through
+  `HealthMonitorService`'s own logger, which is where a genuine Infrastructure fault belongs. Do not
+  reintroduce an unkeyed registration for convenience.
+- **The relational checks share `RelationalHealthCheck`.** The retry-and-`SELECT 1` body lives in the base
+  class; `SqlServerHealthCheck` and `PostgreSqlHealthCheck` add nothing but their keyed constructor. This
+  mirrors `SiblingAppHealthCheck` and exists because the two bodies were byte-identical, which SonarCloud
+  scored as the project's entire duplication debt. Adding a third relational check means extending the
+  base, not copying a body.
 - **All registration is inlined in `Program.cs`.** There is deliberately no `ServiceCollectionExtensions`
   layer in this repo. Add new checks in place rather than introducing one.
 - **Sibling-app checks extend `SiblingAppHealthCheck`.** The base resolves the target's base URL from a
@@ -43,8 +51,7 @@ performs the actual email delivery. This repo never sends mail itself.
 - **Only transitions alert, never steady state.** `Unknown`/`Healthy` → `Unhealthy` sends an alert;
   `Unhealthy` → `Healthy` sends a recovery. `Degraded` sends nothing. Alerting on current status rather
   than on the edge would mail on every poll for the duration of an outage.
-- **`PostgreSqlHealthCheck` and `SqlServerHealthCheck` retry once (250ms delay) before reporting
-  `Unhealthy`.** Diagnosed 2026-08-07: the self-hosted PostgreSQL server and its firewall rule were both
+- **`RelationalHealthCheck` retries once (250ms delay) before reporting `Unhealthy`.** Diagnosed 2026-08-07: the self-hosted PostgreSQL server and its firewall rule were both
   confirmed healthy and current, but the server's own log showed zero trace of the failing connection
   attempts on the days they occurred — the TCP connect (governed by the 30s `Timeout` in
   `NpgsqlConnectionStringBuilder`/`SqlConnectionStringBuilder`) was being dropped in transit between
