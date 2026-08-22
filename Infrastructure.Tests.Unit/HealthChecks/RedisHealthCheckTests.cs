@@ -30,7 +30,7 @@ public sealed class RedisHealthCheckTests
     {
         var db = new Mock<IDatabase>(MockBehavior.Strict);
         db.Setup(d => d.PingAsync(It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "refused"));
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "refused"));
         var muxer = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
 
