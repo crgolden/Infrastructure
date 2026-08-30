@@ -7,7 +7,16 @@ using Models;
 
 public sealed class AlertService : IAlertService
 {
-    private const string From = "noreply@crgolden.com";
+    internal const string From = "noreply@crgolden.com";
+
+    internal const string AlertSubjectPrefix = "[ALERT]";
+
+    internal const string RecoverySubjectPrefix = "[RECOVERY]";
+
+    internal const string ServiceBusClientName = "crgolden";
+
+    internal const string EmailQueueName = "email";
+
     private readonly string _to;
     private readonly ServiceBusClient _serviceBusClient;
 
@@ -19,7 +28,7 @@ public sealed class AlertService : IAlertService
         }
 
         _to = options.Value.RecipientEmail;
-        _serviceBusClient = serviceBusClientFactory.CreateClient("crgolden");
+        _serviceBusClient = serviceBusClientFactory.CreateClient(ServiceBusClientName);
     }
 
     public async Task SendAlertAsync(ServiceHealthResult result, CancellationToken cancellationToken = default)
@@ -32,7 +41,7 @@ public sealed class AlertService : IAlertService
                         <p><strong>Detected at:</strong> {result.CheckedAt:O}</p>
                         """;
         await SendEmailAsync(
-            subject: $"[ALERT] {result.Name} is {result.Status}",
+            subject: $"{AlertSubjectPrefix} {result.Name} is {result.Status}",
             htmlBody: htmlBody,
             cancellationToken: cancellationToken);
     }
@@ -47,7 +56,7 @@ public sealed class AlertService : IAlertService
                         <p><strong>Recovered at:</strong> {result.CheckedAt:O}</p>
                         """;
         await SendEmailAsync(
-            subject: $"[RECOVERY] {result.Name} is {result.Status}",
+            subject: $"{RecoverySubjectPrefix} {result.Name} is {result.Status}",
             htmlBody: htmlBody,
             cancellationToken: cancellationToken);
     }
@@ -63,7 +72,7 @@ public sealed class AlertService : IAlertService
             Subject = subject,
             To = _to
         };
-        var serviceBusSender = _serviceBusClient.CreateSender("email");
+        var serviceBusSender = _serviceBusClient.CreateSender(EmailQueueName);
         await serviceBusSender.SendMessageAsync(message, cancellationToken);
     }
 }

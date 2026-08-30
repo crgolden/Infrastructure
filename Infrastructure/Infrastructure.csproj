@@ -46,6 +46,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Infrastructure.Tests.Unit" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="../.editorconfig" Link=".editorconfig" />
   </ItemGroup>
 

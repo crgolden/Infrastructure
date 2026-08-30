@@ -37,9 +37,9 @@ public sealed class WMSvcHealthCheckTests
     }
 
     [Fact]
-    public void Constructor_WhenHostIsEmpty_ThrowsInvalidOperationException()
+    public void Constructor_WhenHostIsMissing_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = "", WmsvcPort = 8172 });
+        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = null, WmsvcPort = 8172 });
         Assert.Throws<InvalidOperationException>(() => new WMSvcHealthCheck(() => new TcpClient(), options));
     }
 

@@ -5,6 +5,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 public abstract class SiblingAppHealthCheck : IHealthCheck
 {
+    internal const string HealthyBody = "Healthy";
+
     private readonly HttpClient _httpClient;
     private readonly Uri _requestUri;
 
@@ -27,7 +29,7 @@ public abstract class SiblingAppHealthCheck : IHealthCheck
             }
 
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            return body.Trim() == "Healthy"
+            return string.Equals(body.Trim(), HealthyBody, StringComparison.Ordinal)
                 ? HealthCheckResult.Healthy($"HTTP {(int)response.StatusCode}")
                 : HealthCheckResult.Unhealthy($"Unexpected response: {body}");
         }

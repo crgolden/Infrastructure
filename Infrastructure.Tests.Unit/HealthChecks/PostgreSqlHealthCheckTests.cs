@@ -62,31 +62,19 @@ public sealed class PostgreSqlHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenFirstAttemptThrowsAndSecondSucceeds_ReturnsHealthy()
     {
-        var attempt = 0;
-        var check = new PostgreSqlHealthCheck(() =>
-        {
-            attempt++;
-            if (attempt == 1)
-            {
-                throw new InvalidOperationException("transient network blip");
-            }
-
-            var mockCommand = new Mock<IDbCommand>(MockBehavior.Strict);
-            mockCommand.SetupSet(c => c.CommandText = "SELECT 1");
-            mockCommand.Setup(c => c.ExecuteScalar()).Returns(1);
-            mockCommand.Setup(c => c.Dispose());
-            var mockConnection = new Mock<IDbConnection>(MockBehavior.Strict);
-            mockConnection.Setup(c => c.Open());
-            mockConnection.Setup(c => c.CreateCommand()).Returns(mockCommand.Object);
-            mockConnection.Setup(c => c.Dispose());
-            return mockConnection.Object;
-        });
+        var transientFailureMessage = $"transient-{Guid.NewGuid()}";
+        var remainingAttempts = new Queue<Func<IDbConnection>>(
+        [
+            () => throw new InvalidOperationException(transientFailureMessage),
+            BuildHealthyConnection,
+        ]);
+        var check = new PostgreSqlHealthCheck(() => remainingAttempts.Dequeue()());
 
         var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
 
         Assert.Equal(HealthStatus.Healthy, result.Status);
         Assert.Equal("Connected", result.Description);
-        Assert.Equal(2, attempt);
+        Assert.Empty(remainingAttempts);
     }
 
     [Fact]
@@ -132,5 +120,18 @@ public sealed class PostgreSqlHealthCheckTests
     private static HealthCheckContext CreateContext(PostgreSqlHealthCheck check)
     {
         return new HealthCheckContext { Registration = new HealthCheckRegistration("PostgreSQL", check, null, null) };
+    }
+
+    private static IDbConnection BuildHealthyConnection()
+    {
+        var mockCommand = new Mock<IDbCommand>(MockBehavior.Strict);
+        mockCommand.SetupSet(c => c.CommandText = "SELECT 1");
+        mockCommand.Setup(c => c.ExecuteScalar()).Returns(1);
+        mockCommand.Setup(c => c.Dispose());
+        var mockConnection = new Mock<IDbConnection>(MockBehavior.Strict);
+        mockConnection.Setup(c => c.Open());
+        mockConnection.Setup(c => c.CreateCommand()).Returns(mockCommand.Object);
+        mockConnection.Setup(c => c.Dispose());
+        return mockConnection.Object;
     }
 }

@@ -123,6 +123,7 @@ try
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
                 .AddMeter("Microsoft.AspNetCore.Hosting")
+                .AddMeter(nameof(Infrastructure))
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder

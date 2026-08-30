@@ -1,10 +1,11 @@
 namespace Infrastructure.Tests.Unit.Services;
 
+using Infrastructure;
 using Infrastructure.Hubs;
 using Infrastructure.Services;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Models;
 using Moq;
@@ -32,7 +33,6 @@ public sealed class HealthMonitorServiceTests
         var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -68,7 +68,6 @@ public sealed class HealthMonitorServiceTests
             .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -113,7 +112,6 @@ public sealed class HealthMonitorServiceTests
             .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -161,7 +159,6 @@ public sealed class HealthMonitorServiceTests
             .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -199,7 +196,6 @@ public sealed class HealthMonitorServiceTests
         var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -226,7 +222,6 @@ public sealed class HealthMonitorServiceTests
         var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         Assert.Throws<InvalidOperationException>(() => new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -253,7 +248,6 @@ public sealed class HealthMonitorServiceTests
         var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -293,7 +287,6 @@ public sealed class HealthMonitorServiceTests
         var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -332,7 +325,6 @@ public sealed class HealthMonitorServiceTests
             .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -379,7 +371,6 @@ public sealed class HealthMonitorServiceTests
             .Returns(Task.CompletedTask);
 
         var svc = new HealthMonitorService(
-            NullLogger<HealthMonitorService>.Instance,
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
@@ -395,6 +386,55 @@ public sealed class HealthMonitorServiceTests
                 It.Is<ServiceHealthResult>(r => r.Status == ServiceStatus.Healthy),
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenCheckHealthAsyncThrows_CountsAPollStageFailure()
+    {
+        // Arrange
+        using var capture = new CounterCapture(
+            Telemetry.Metrics.MeterName,
+            Telemetry.Metrics.HealthMonitorFailureCounterName);
+
+        var pollFailureMessage = $"poll-failure-{Guid.NewGuid()}";
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        healthCheckService
+            .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException(pollFailureMessage))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy))
+            .ReturnsAsync(BuildReport(HealthStatus.Healthy));
+
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
+        hubContext.Setup(h => h.Clients).Returns(clients.Object);
+        clients.Setup(c => c.All).Returns(clientProxy.Object);
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+
+        var svc = new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            GetDefaultOptions());
+
+        // Act
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        _ = svc.StartAsync(cts.Token);
+        await capture.FirstMeasurement.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+
+        // Assert
+        var measurement = Assert.Single(capture.Measurements);
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal(Telemetry.Metrics.PollStage, measurement.Tags[Telemetry.Metrics.StageTagName]);
+        Assert.Equal(
+            typeof(InvalidOperationException).FullName,
+            measurement.Tags[Telemetry.Metrics.ExceptionTypeTagName]);
     }
 
     private static IOptions<MonitoringOptions> GetDefaultOptions() =>

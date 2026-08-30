@@ -3,7 +3,6 @@ namespace Infrastructure.Services;
 using Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Models;
 using OpenTelemetry;
@@ -12,7 +11,6 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 {
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
-    private readonly ILogger<HealthMonitorService> _logger;
     private readonly HealthCheckService _healthCheckService;
     private readonly IHubContext<HealthHub> _hubContext;
     private readonly IAlertService _alertService;
@@ -21,13 +19,11 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
     private HealthSnapshot? _lastSnapshot;
 
     public HealthMonitorService(
-        ILogger<HealthMonitorService> logger,
         HealthCheckService healthCheckService,
         IHubContext<HealthHub> hubContext,
         IAlertService alertService,
         IOptions<MonitoringOptions> options)
     {
-        _logger = logger;
         _healthCheckService = healthCheckService;
         _hubContext = hubContext;
         _alertService = alertService;
@@ -83,7 +79,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Health check service threw during poll");
+            Telemetry.Metrics.HealthMonitorFailed(Telemetry.Metrics.PollStage, ex);
             return;
         }
 
@@ -111,7 +107,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to push health snapshot to SignalR hub");
+            Telemetry.Metrics.HealthMonitorFailed(Telemetry.Metrics.SnapshotPushStage, ex);
         }
 
         foreach (var result in results)
@@ -137,7 +133,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to send alert for {ServiceName}", result.Name);
+                Telemetry.Metrics.HealthMonitorFailed(Telemetry.Metrics.AlertSendStage, ex);
             }
 
             _previousStatuses[result.Name] = current;

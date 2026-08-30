@@ -37,9 +37,9 @@ public sealed class YawcamHealthCheckTests
     }
 
     [Fact]
-    public void Constructor_WhenHostIsEmpty_ThrowsInvalidOperationException()
+    public void Constructor_WhenHostIsMissing_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = "", YawcamPort = 5995 });
+        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = null, YawcamPort = 5995 });
         Assert.Throws<InvalidOperationException>(() => new YawcamHealthCheck(() => new TcpClient(), options));
     }
 

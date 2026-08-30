@@ -19,7 +19,7 @@ public sealed class KeepaliveService : BackgroundService
         _httpClient = httpClient;
         _interval = interval;
         var hostname = configuration["WEBSITE_HOSTNAME"];
-        _pingUri = IsNullOrEmpty(hostname) ? null : new Uri($"https://{hostname}/ping");
+        _pingUri = IsNullOrWhiteSpace(hostname) ? null : new Uri($"https://{hostname}/ping");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

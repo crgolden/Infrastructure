@@ -37,9 +37,9 @@ public sealed class AlloyHealthCheckTests
     }
 
     [Fact]
-    public void Constructor_WhenHostIsEmpty_ThrowsInvalidOperationException()
+    public void Constructor_WhenHostIsMissing_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { AlloyHost = "", AlloyPort = 4317 });
+        var options = Options.Create(new ServiceEndpointOptions { AlloyHost = null, AlloyPort = 4317 });
         Assert.Throws<InvalidOperationException>(() => new AlloyHealthCheck(() => new TcpClient(), options));
     }
 
