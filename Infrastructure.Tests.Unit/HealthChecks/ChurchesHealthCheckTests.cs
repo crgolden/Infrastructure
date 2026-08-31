@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 using Moq.Protected;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class ChurchesHealthCheckTests
@@ -46,18 +47,19 @@ public sealed class ChurchesHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new ChurchesHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultConfiguration());
+        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var check = new ChurchesHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Churches", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("timeout", result.Description);
+        Assert.Equal(transportFailureMessage, result.Description);
     }
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["ChurchesServerAddress"] = "https://crgolden-churches.azurewebsites.net" })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["ChurchesServerAddress"] = TestValues.NewServiceAddress() })
             .Build();
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content)

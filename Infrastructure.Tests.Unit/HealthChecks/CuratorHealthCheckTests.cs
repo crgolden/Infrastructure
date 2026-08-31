@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 using Moq.Protected;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class CuratorHealthCheckTests
@@ -46,18 +47,19 @@ public sealed class CuratorHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new CuratorHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultConfiguration());
+        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var check = new CuratorHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Curator", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("timeout", result.Description);
+        Assert.Equal(transportFailureMessage, result.Description);
     }
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["CuratorApiAddress"] = "https://crgolden-curator.azurewebsites.net" })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["CuratorApiAddress"] = TestValues.NewServiceAddress() })
             .Build();
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content)

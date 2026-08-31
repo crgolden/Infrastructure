@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 using Moq.Protected;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class InventoryHealthCheckTests
@@ -46,18 +47,19 @@ public sealed class InventoryHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new InventoryHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultConfiguration());
+        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var check = new InventoryHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Inventory", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("timeout", result.Description);
+        Assert.Equal(transportFailureMessage, result.Description);
     }
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["InventoryServerAddress"] = "https://crgolden-inventory.azurewebsites.net" })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["InventoryServerAddress"] = TestValues.NewServiceAddress() })
             .Build();
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content)

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Models;
 using Moq;
 using Moq.Protected;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class HomeAssistantHealthCheckTests
@@ -36,13 +37,14 @@ public sealed class HomeAssistantHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
-        var check = new HomeAssistantHealthCheck(BuildThrowingClient(new HttpRequestException("timeout")), GetDefaultOptions());
+        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var check = new HomeAssistantHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultOptions());
         var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Home Assistant", check, null, null) };
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("timeout", result.Description);
+        Assert.Equal(transportFailureMessage, result.Description);
     }
 
     private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { HomeAssistant = new Uri("https://home-assistant.test:8123") });
