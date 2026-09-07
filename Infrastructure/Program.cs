@@ -40,7 +40,7 @@ try
     var builder = WebApplication.CreateBuilder(args);
     string elasticsearchUsername = builder.Configuration.GetRequired<string>("ElasticsearchUsername"),
         elasticsearchPassword = builder.Configuration.GetRequired<string>("ElasticsearchPassword"),
-        adminEmail = builder.Configuration.GetRequired<string>("AdminEmail"),
+        alertRecipientEmail = builder.Configuration.GetRequired<string>("Email1"),
         infrastructureClientId = builder.Configuration.GetRequired<string>("InfrastructureClientId"),
         infrastructureClientSecret = builder.Configuration.GetRequired<string>("InfrastructureClientSecret");
     var oidcAuthority = builder.Configuration.GetRequired<Uri>("OidcAuthority");
@@ -165,7 +165,7 @@ try
 
     builder.Services
         .Configure<MonitoringOptions>(monitoringOptionsSection)
-        .Configure<AlertOptions>(alertOptions => alertOptions.RecipientEmail = adminEmail)
+        .Configure<AlertOptions>(alertOptions => alertOptions.RecipientEmail = alertRecipientEmail)
         .Configure<ServiceEndpointOptions>(serviceEndpointOptionsSection)
         .AddHttpClient<IisHttpsHealthCheck>().Services
         .AddHttpClient<ElasticsearchHealthCheck>(httpClient =>

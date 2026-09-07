@@ -109,7 +109,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `CuratorApiAddress` | Curator base URL (`/health` target) |
 | `LibrarianServerAddress` | Librarian base URL (`/health` target) |
 
-> The alert recipient (`AlertOptions.RecipientEmail`) is **not** a config key — it is bound from the `AdminEmail` secret at startup.
+> The alert recipient (`AlertOptions.RecipientEmail`) is **not** a config key — it is bound from the `Email1` secret at startup.
 
 **Production-only configuration (Azure App Service settings):**
 
@@ -137,7 +137,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `MongoDbPassword` | MongoDB password |
 | `PostgreSqlUserId` | PostgreSQL login |
 | `PostgreSqlPassword` | PostgreSQL password |
-| `AdminEmail` | Alert recipient email address |
+| `Email1` | Alert recipient email address (shared with the synthetic walkers' slot-1 account) |
 | `InfrastructureClientId` | OIDC client ID |
 | `InfrastructureClientSecret` | OIDC client secret |
 | `ServiceBusConnectionString` | Service Bus connection string (non-production only) |
