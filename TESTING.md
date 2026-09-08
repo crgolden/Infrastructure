@@ -45,9 +45,15 @@ These apply to every `[Fact]` and `[Theory]` in `Infrastructure.Tests.Unit`.
 
 ## Running Tests Locally
 
+For running tests (`dotnet test` from the repo root — never the workspace root) and the exe-runner flags,
+see the workspace-level [TESTING.md](../AGENTS/TESTING.md).
+
 No Azure credentials required — all tests are unit tests.
 
 ```powershell
+dotnet test --project Infrastructure.Tests.Unit --configuration Debug -- --filter-trait "Category=Unit"
+
+# or the compiled runner, when you want -showLiveOutput:
 dotnet build Infrastructure.Tests.Unit --configuration Debug
 .\Infrastructure.Tests.Unit\bin\Debug\net10.0\Infrastructure.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
 ```
