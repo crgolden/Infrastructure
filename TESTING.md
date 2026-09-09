@@ -162,6 +162,6 @@ Required coverage files: `coverage.opencover.xml` (unit, OpenCover).
 
 ### When to build a truth table
 
-The coverage **score is read from SonarCloud, never hand-maintained** here. Build a per-method table in `COVERAGE-TRUTH-TABLES.md` only when SonarCloud flags a method with **cognitive complexity > 15 AND uncovered conditions > 0**: the table is escalation for the gnarly few, not a per-class deliverable.
+The coverage **score is read from SonarCloud, never hand-maintained** here. Build a per-method table in the workspace `COVERAGE/Infrastructure.md` only when SonarCloud flags a method with **cognitive complexity > 15 AND uncovered conditions > 0**: the table is escalation for the gnarly few, not a per-class deliverable. See the workspace `COVERAGE/METHOD.md`.
 
 A truth table writes out a method's decision units in full — one row per unit, each row an independent condition whose outcome the tests must pin down. It is the MC/DC question ("how many tests does this method actually need?") made explicit and cacheable, so the answer survives past the session that worked it out.
