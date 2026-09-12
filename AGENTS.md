@@ -59,6 +59,16 @@ performs the actual email delivery. This repo never sends mail itself.
   network blip into a full alert cycle; the retry absorbs that without masking a real outage, since a
   sustained problem still fails both attempts.
 
+- **The relational checks validate the server's TLS certificate.** `NpgsqlConnectionStringBuilder:SslMode`
+  is `VerifyFull`, and `SqlConnectionStringBuilder` pairs `Encrypt: true` with
+  `TrustServerCertificate: false`. Neither may be weakened to `Require`/`Prefer` or to a trusted-blindly
+  certificate. Under an unvalidated mode the driver still completes a handshake against an expired,
+  untrusted or wrong-host certificate, `SELECT 1` still answers, and the check reports `Healthy` — so the
+  dashboard says the database is fine while every client that does validate is already failing, and the
+  transition email that exists for exactly that outage never sends. The check must fail for the same
+  reasons a real consumer fails, or it is only testing that the port is open. `Development` sets
+  `SslMode: Disable` because a local server presents no certificate; that is a different statement from
+  trusting one it cannot verify.
 - **A monitored service being down is data, not an Infrastructure fault.** Two consequences, both load-
   bearing. First, `/health` maps the health-check registry with `Predicate = _ => false`, so it reports
   only whether *this app* is running — never the aggregate of the fleet it watches. Registering the
