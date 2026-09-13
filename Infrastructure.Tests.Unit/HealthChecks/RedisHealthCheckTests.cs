@@ -4,6 +4,7 @@ using Infrastructure.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 using StackExchange.Redis;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class RedisHealthCheckTests
@@ -18,7 +19,7 @@ public sealed class RedisHealthCheckTests
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
 
         var check = new RedisHealthCheck(muxer.Object);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Redis", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Redis);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -30,12 +31,13 @@ public sealed class RedisHealthCheckTests
     {
         var db = new Mock<IDatabase>(MockBehavior.Strict);
         db.Setup(d => d.PingAsync(It.IsAny<CommandFlags>()))
-            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "refused"));
+            .ThrowsAsync(new RedisConnectionException(
+                ConnectionFailureType.UnableToConnect, CommandFlags.None, TestValues.NewFailureMessage()));
         var muxer = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
 
         var check = new RedisHealthCheck(muxer.Object);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Redis", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Redis);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -50,7 +52,7 @@ public sealed class RedisHealthCheckTests
             .Throws(new InvalidOperationException("muxer not connected"));
 
         var check = new RedisHealthCheck(muxer.Object);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Redis", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Redis);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 

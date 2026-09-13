@@ -10,10 +10,12 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 [Authorize]
 public sealed class LogoutModel : PageModel
 {
+    internal const string SignedOutRedirectUri = "/";
+
     public IActionResult OnPost()
     {
         return SignOut(
-            new AuthenticationProperties { RedirectUri = "/" },
+            new AuthenticationProperties { RedirectUri = SignedOutRedirectUri },
             CookieAuthenticationDefaults.AuthenticationScheme,
             OpenIdConnectDefaults.AuthenticationScheme);
     }

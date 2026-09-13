@@ -1,7 +1,9 @@
 namespace Infrastructure.Tests.Unit.Controllers;
 
 using Infrastructure.Controllers;
+using Infrastructure.HealthChecks;
 using Infrastructure.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Models;
 using Moq;
@@ -14,7 +16,13 @@ public sealed class StatusControllerTests
     {
         var snapshot = new HealthSnapshot(
             DateTimeOffset.UtcNow,
-            [new ServiceHealthResult("SQL Server", ServiceStatus.Healthy, "Connected", DateTimeOffset.UtcNow)]);
+            [
+                new ServiceHealthResult(
+                    HealthCheckNames.SqlServer,
+                    ServiceStatus.Healthy,
+                    RelationalHealthCheck.HealthyDescription,
+                    DateTimeOffset.UtcNow),
+            ]);
 
         var service = new Mock<IHealthMonitorService>(MockBehavior.Strict);
         service.Setup(s => s.LastSnapshot).Returns(snapshot);
@@ -36,6 +44,6 @@ public sealed class StatusControllerTests
         var result = controller.Get();
 
         var statusResult = Assert.IsType<StatusCodeResult>(result.Result);
-        Assert.Equal(503, statusResult.StatusCode);
+        Assert.Equal(StatusCodes.Status503ServiceUnavailable, statusResult.StatusCode);
     }
 }

@@ -5,7 +5,12 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 public abstract class RelationalHealthCheck : IHealthCheck
 {
-    private const int MaxAttempts = 2;
+    internal const int MaxAttempts = 2;
+
+    internal const string ProbeCommandText = "SELECT 1";
+
+    internal const string HealthyDescription = "Connected";
+
     private static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(250);
 
     private readonly Func<IDbConnection> _connectionFactory;
@@ -27,9 +32,9 @@ public abstract class RelationalHealthCheck : IHealthCheck
                 using var connection = _connectionFactory();
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT 1";
+                command.CommandText = ProbeCommandText;
                 command.ExecuteScalar();
-                return HealthCheckResult.Healthy("Connected");
+                return HealthCheckResult.Healthy(HealthyDescription);
             }
             catch (Exception ex)
             {

@@ -5,6 +5,7 @@ using Infrastructure.HealthChecks;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class SqlServerHealthCheckTests
@@ -12,22 +13,23 @@ public sealed class SqlServerHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()
     {
-        Func<SqlConnection> factory = () => throw new InvalidOperationException("connection failed");
+        var failureMessage = TestValues.NewFailureMessage();
+        Func<SqlConnection> factory = () => throw new InvalidOperationException(failureMessage);
         var check = new SqlServerHealthCheck(factory);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("SQL Server", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.Equal("connection failed", result.Description);
+        Assert.Equal(failureMessage, result.Description);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionStringIsInvalid_ReturnsUnhealthy()
     {
-        Func<SqlConnection> factory = () => new SqlConnection("Server=127.0.0.1,9999;Database=test;User Id=sa;Password=wrong;Connect Timeout=1;Encrypt=False;");
+        Func<SqlConnection> factory = () => new SqlConnection(UnreachableSqlConnectionString());
         var check = new SqlServerHealthCheck(factory);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("SQL Server", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -45,12 +47,12 @@ public sealed class SqlServerHealthCheckTests
         mockConn.Setup(c => c.CreateCommand()).Returns(mockCmd.Object);
         Func<IDbConnection> factory = () => mockConn.Object;
         var check = new SqlServerHealthCheck(factory);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("SQL Server", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal("Connected", result.Description);
+        Assert.Equal(RelationalHealthCheck.HealthyDescription, result.Description);
     }
 
     [Fact]
@@ -63,14 +65,25 @@ public sealed class SqlServerHealthCheckTests
             BuildHealthyConnection,
         ]);
         var check = new SqlServerHealthCheck(() => remainingAttempts.Dequeue()());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("SQL Server", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Healthy, result.Status);
-        Assert.Equal("Connected", result.Description);
+        Assert.Equal(RelationalHealthCheck.HealthyDescription, result.Description);
         Assert.Empty(remainingAttempts);
     }
+
+    private static string UnreachableSqlConnectionString() =>
+        new SqlConnectionStringBuilder
+        {
+            DataSource = $"{TestValues.LoopbackHost},{TestValues.NewClosedLoopbackPort()}",
+            InitialCatalog = TestValues.NewDatabaseName(),
+            UserID = TestValues.NewUserId(),
+            Password = TestValues.NewPassword(),
+            ConnectTimeout = 1,
+            Encrypt = false,
+        }.ConnectionString;
 
     private static IDbConnection BuildHealthyConnection()
     {

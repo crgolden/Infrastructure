@@ -4,84 +4,117 @@ using System.Net;
 using System.Net.Http;
 using Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Moq.Protected;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class KeepaliveServiceTests
 {
+    private const string SendAsyncMethod = "SendAsync";
+
+    private static readonly string PingHostname = TestValues.NewHostname();
+
     [Fact]
     public async Task ExecuteAsync_WhenHostnameIsNull_ReturnsWithoutCallingHttp()
     {
         var config = new ConfigurationBuilder().Build();
         var handlerMock = new Mock<HttpMessageHandler>();
         using var httpClient = new HttpClient(handlerMock.Object);
-        var svc = new KeepaliveService(httpClient, config, TimeSpan.FromMilliseconds(50));
+        var timeProvider = new FakeTimeProvider();
+        var pingInterval = TestValues.NewPingInterval();
+        var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        using var cts = new CancellationTokenSource();
         await svc.StartAsync(cts.Token);
+        timeProvider.Advance(pingInterval);
+        await cts.CancelAsync();
 
         handlerMock.Protected()
-            .Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+            .Verify(
+                SendAsyncMethod,
+                Times.Never(),
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>());
     }
 
     [Fact]
     public async Task ExecuteAsync_WhenHostnameIsSet_CallsGetAsync()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection([new KeyValuePair<string, string?>("WEBSITE_HOSTNAME", "example.com")])
-            .Build();
+        var config = ConfigurationWithHostname();
+        var pinged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
+                SendAsyncMethod,
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
+            .Returns(() =>
+            {
+                pinged.TrySetResult();
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+            });
         using var httpClient = new HttpClient(handlerMock.Object);
-        var svc = new KeepaliveService(httpClient, config, TimeSpan.FromMilliseconds(50));
+        var timeProvider = new FakeTimeProvider();
+        var pingInterval = TestValues.NewPingInterval();
+        var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-        _ = svc.StartAsync(cts.Token);
-        await Task.Delay(250, TestContext.Current.CancellationToken);
+        using var cts = new CancellationTokenSource();
+        await svc.StartAsync(cts.Token);
+        timeProvider.Advance(pingInterval);
+        await pinged.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         handlerMock.Protected()
             .Verify(
-                "SendAsync",
+                SendAsyncMethod,
                 Times.AtLeastOnce(),
-                ItExpr.Is<HttpRequestMessage>(r => r.RequestUri == new Uri("https://example.com/ping")),
+                ItExpr.Is<HttpRequestMessage>(r => r.RequestUri == KeepaliveService.PingUri(PingHostname)),
                 ItExpr.IsAny<CancellationToken>());
     }
 
     [Fact]
     public async Task ExecuteAsync_WhenGetAsyncThrows_DoesNotPropagateException()
     {
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection([new KeyValuePair<string, string?>("WEBSITE_HOSTNAME", "example.com")])
-            .Build();
+        var config = ConfigurationWithHostname();
+        var pinged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var handlerMock = new Mock<HttpMessageHandler>();
         handlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
+                SendAsyncMethod,
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(new HttpRequestException("connection refused"));
+            .Returns(() =>
+            {
+                pinged.TrySetResult();
+                return Task.FromException<HttpResponseMessage>(
+                    new HttpRequestException(TestValues.NewTransportFailureMessage()));
+            });
         using var httpClient = new HttpClient(handlerMock.Object);
-        var svc = new KeepaliveService(httpClient, config, TimeSpan.FromMilliseconds(50));
+        var timeProvider = new FakeTimeProvider();
+        var pingInterval = TestValues.NewPingInterval();
+        var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
-        _ = svc.StartAsync(cts.Token);
-        await Task.Delay(250, TestContext.Current.CancellationToken);
+        using var cts = new CancellationTokenSource();
+        await svc.StartAsync(cts.Token);
+        timeProvider.Advance(pingInterval);
+        await pinged.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         handlerMock.Protected()
             .Verify(
-                "SendAsync",
+                SendAsyncMethod,
                 Times.AtLeastOnce(),
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>());
     }
+
+    private static IConfiguration ConfigurationWithHostname() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection([
+                new KeyValuePair<string, string?>(KeepaliveService.HostnameConfigurationKey, PingHostname)])
+            .Build();
 }

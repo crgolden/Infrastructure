@@ -4,8 +4,6 @@ using System.Net;
 using Infrastructure.HealthChecks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Moq;
-using Moq.Protected;
 using TestSupport;
 
 [Trait("Category", "Unit")]
@@ -14,8 +12,8 @@ public sealed class ProductsHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccessAndBodyIsHealthy_ReturnsHealthy()
     {
-        var check = new ProductsHealthCheck(BuildClient(HttpStatusCode.OK, "Healthy"), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Products", check, null, null) };
+        var check = new ProductsHealthCheck(BuildClient(HttpStatusCode.OK, SiblingAppHealthCheck.HealthyBody), GetDefaultConfiguration());
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Products);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -25,8 +23,8 @@ public sealed class ProductsHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccessButBodyIsNotHealthy_ReturnsUnhealthy()
     {
-        var check = new ProductsHealthCheck(BuildClient(HttpStatusCode.OK, "Degraded"), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Products", check, null, null) };
+        var check = new ProductsHealthCheck(BuildClient(HttpStatusCode.OK, TestValues.NewUnexpectedHealthBody()), GetDefaultConfiguration());
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Products);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -37,7 +35,7 @@ public sealed class ProductsHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         var check = new ProductsHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Products", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Products);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -49,7 +47,7 @@ public sealed class ProductsHealthCheckTests
     {
         var transportFailureMessage = TestValues.NewTransportFailureMessage();
         var check = new ProductsHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Products", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Products);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -59,24 +57,12 @@ public sealed class ProductsHealthCheckTests
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["ProductsApiAddress"] = TestValues.NewServiceAddress() })
+            .AddInMemoryCollection(new Dictionary<string, string?> { [ProductsHealthCheck.ConfigurationKey] = TestValues.NewServiceAddress() })
             .Build();
 
-    private static HttpClient BuildClient(HttpStatusCode statusCode, string content)
-    {
-        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode) { Content = new StringContent(content) });
-        return new HttpClient(handler.Object);
-    }
+    private static HttpClient BuildClient(HttpStatusCode statusCode, string content) =>
+        StubHttpMessageHandler.RespondingWith(statusCode, content);
 
-    private static HttpClient BuildThrowingClient(Exception ex)
-    {
-        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(ex);
-        return new HttpClient(handler.Object);
-    }
+    private static HttpClient BuildThrowingClient(Exception ex) =>
+        StubHttpMessageHandler.Throwing(ex);
 }

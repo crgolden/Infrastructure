@@ -3,6 +3,7 @@ namespace Infrastructure.HealthChecks;
 using Microsoft.Extensions.Configuration;
 
 public sealed class DirectoryHealthCheck(HttpClient httpClient, IConfiguration configuration)
-    : SiblingAppHealthCheck(httpClient, configuration, "DirectoryApiAddress")
+    : SiblingAppHealthCheck(httpClient, configuration, ConfigurationKey)
 {
+    internal const string ConfigurationKey = "DirectoryApiAddress";
 }

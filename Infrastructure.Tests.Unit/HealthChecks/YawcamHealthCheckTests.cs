@@ -5,18 +5,19 @@ using Infrastructure.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class YawcamHealthCheckTests
 {
-    private static IOptions<ServiceEndpointOptions> DefaultOptions => Options.Create(new ServiceEndpointOptions { YawcamHost = "127.0.0.1", YawcamPort = 5995 });
+    private static IOptions<ServiceEndpointOptions> DefaultOptions => Options.Create(new ServiceEndpointOptions { YawcamHost = TestValues.LoopbackHost, YawcamPort = TestValues.NewClosedLoopbackPort() });
 
     [Fact]
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()
     {
-        Func<TcpClient> factory = () => throw new SocketException(10061);
+        Func<TcpClient> factory = () => throw new SocketException((int)SocketError.ConnectionRefused);
         var check = new YawcamHealthCheck(factory, DefaultOptions);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Yawcam AI", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Yawcam);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -26,10 +27,10 @@ public sealed class YawcamHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionRefused_ReturnsUnhealthy()
     {
-        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = "127.0.0.1", YawcamPort = 19999 });
+        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = TestValues.LoopbackHost, YawcamPort = TestValues.NewClosedLoopbackPort() });
         Func<TcpClient> factory = () => new TcpClient();
         var check = new YawcamHealthCheck(factory, options);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Yawcam AI", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Yawcam);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -39,14 +40,14 @@ public sealed class YawcamHealthCheckTests
     [Fact]
     public void Constructor_WhenHostIsMissing_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = null, YawcamPort = 5995 });
+        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = null, YawcamPort = TestValues.NewClosedLoopbackPort() });
         Assert.Throws<InvalidOperationException>(() => new YawcamHealthCheck(() => new TcpClient(), options));
     }
 
     [Fact]
     public void Constructor_WhenPortIsNull_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = "localhost", YawcamPort = null });
+        var options = Options.Create(new ServiceEndpointOptions { YawcamHost = TestValues.LoopbackHost, YawcamPort = null });
         Assert.Throws<InvalidOperationException>(() => new YawcamHealthCheck(() => new TcpClient(), options));
     }
 
@@ -58,10 +59,10 @@ public sealed class YawcamHealthCheckTests
         int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
         try
         {
-            var options = Options.Create(new ServiceEndpointOptions { YawcamHost = "127.0.0.1", YawcamPort = port });
+            var options = Options.Create(new ServiceEndpointOptions { YawcamHost = TestValues.LoopbackHost, YawcamPort = port });
             Func<TcpClient> factory = () => new TcpClient();
             var check = new YawcamHealthCheck(factory, options);
-            var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Yawcam AI", check, null, null) };
+            var context = HealthCheckContexts.Create(check, HealthCheckNames.Yawcam);
 
             var result = await check.CheckHealthAsync(context, CancellationToken.None);
 

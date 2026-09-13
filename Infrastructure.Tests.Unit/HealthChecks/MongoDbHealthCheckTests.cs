@@ -5,6 +5,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class MongoDbHealthCheckTests
@@ -17,13 +18,13 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<BsonDocumentCommand<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BsonDocument("ok", 1));
+            .ReturnsAsync(new BsonDocument(MongoDbHealthCheck.CommandOkField, 1));
 
         var client = new Mock<IMongoClient>(MockBehavior.Strict);
-        client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
+        client.Setup(c => c.GetDatabase(MongoDbHealthCheck.DatabaseName, It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
 
         var check = new MongoDbHealthCheck(client.Object);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("MongoDB", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -38,13 +39,18 @@ public sealed class MongoDbHealthCheckTests
                 It.IsAny<BsonDocumentCommand<BsonDocument>>(),
                 It.IsAny<ReadPreference>(),
                 It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new MongoConnectionException(new MongoDB.Driver.Core.Connections.ConnectionId(new MongoDB.Driver.Core.Servers.ServerId(new MongoDB.Driver.Core.Clusters.ClusterId(), new System.Net.DnsEndPoint("localhost", 27017))), "timeout"));
+            .ThrowsAsync(new MongoConnectionException(
+                new MongoDB.Driver.Core.Connections.ConnectionId(
+                    new MongoDB.Driver.Core.Servers.ServerId(
+                        new MongoDB.Driver.Core.Clusters.ClusterId(),
+                        new System.Net.DnsEndPoint(TestValues.LoopbackHost, TestValues.NewClosedLoopbackPort()))),
+                TestValues.NewFailureMessage()));
 
         var client = new Mock<IMongoClient>(MockBehavior.Strict);
-        client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
+        client.Setup(c => c.GetDatabase(MongoDbHealthCheck.DatabaseName, It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);
 
         var check = new MongoDbHealthCheck(client.Object);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("MongoDB", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -55,11 +61,11 @@ public sealed class MongoDbHealthCheckTests
     public async Task CheckHealthAsync_WhenGetDatabaseThrows_ReturnsUnhealthy()
     {
         var client = new Mock<IMongoClient>(MockBehavior.Strict);
-        client.Setup(c => c.GetDatabase("crgolden", It.IsAny<MongoDatabaseSettings>()))
+        client.Setup(c => c.GetDatabase(MongoDbHealthCheck.DatabaseName, It.IsAny<MongoDatabaseSettings>()))
             .Throws(new InvalidOperationException("not connected"));
 
         var check = new MongoDbHealthCheck(client.Object);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("MongoDB", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 

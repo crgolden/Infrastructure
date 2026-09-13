@@ -13,6 +13,8 @@ using Moq;
 [Trait("Category", "Unit")]
 public sealed class HealthMonitorServiceTests
 {
+    private static readonly string MonitoredServiceName = TestValues.NewMonitoredServiceName();
+
     [Fact]
     public async Task ExecuteAsync_StoresSnapshotAfterFirstPoll()
     {
@@ -38,9 +40,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await snapshotPushed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         Assert.NotNull(svc.LastSnapshot);
@@ -73,9 +75,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await alertSent.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await alertSent.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         alertService.Verify(
@@ -117,9 +119,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await alertSent.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await alertSent.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         alertService.Verify(
@@ -164,9 +166,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await recoverySent.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await recoverySent.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         alertService.Verify(
@@ -201,14 +203,14 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await snapshotPushed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         clientProxy.Verify(
             c => c.SendCoreAsync(
-                "ReceiveSnapshot",
+                HealthMonitorService.SnapshotClientMethod,
                 It.IsAny<object[]>(),
                 It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
@@ -253,9 +255,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await snapshotPushed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         Assert.NotNull(svc.LastSnapshot);
@@ -268,7 +270,7 @@ public sealed class HealthMonitorServiceTests
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("downstream exploded"))
+            .ThrowsAsync(new InvalidOperationException(TestValues.NewFailureMessage()))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy))
@@ -292,14 +294,15 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await snapshotPushed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         Assert.NotNull(svc.LastSnapshot);
         clientProxy.Verify(
-            c => c.SendCoreAsync("ReceiveSnapshot", It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
+            c => c.SendCoreAsync(
+                HealthMonitorService.SnapshotClientMethod, It.IsAny<object[]>(), It.IsAny<CancellationToken>()),
             Times.AtLeastOnce);
     }
 
@@ -330,9 +333,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await alertSent.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await alertSent.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         alertService.Verify(
@@ -376,9 +379,9 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await recoverySent.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await recoverySent.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         alertService.Verify(
@@ -423,9 +426,9 @@ public sealed class HealthMonitorServiceTests
             GetDefaultOptions());
 
         // Act
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
-        await capture.FirstMeasurement.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        await capture.FirstMeasurement.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
         // Assert
@@ -440,11 +443,14 @@ public sealed class HealthMonitorServiceTests
     private static IOptions<MonitoringOptions> GetDefaultOptions() =>
         Options.Create(new MonitoringOptions { IntervalSeconds = 1 });
 
-    private static HealthReport BuildReport(HealthStatus status, string name = "SQL Server") =>
-        new(
+    private static HealthReport BuildReport(HealthStatus status, string? name = null)
+    {
+        var serviceName = name ?? MonitoredServiceName;
+        return new HealthReport(
             new Dictionary<string, HealthReportEntry>
             {
-                [name] = new(status, $"{status} description", TimeSpan.Zero, null, null),
+                [serviceName] = new(status, TestValues.NewServiceDescription(), TimeSpan.Zero, null, null),
             },
             TimeSpan.Zero);
+    }
 }

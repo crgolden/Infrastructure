@@ -9,6 +9,8 @@ using OpenTelemetry;
 
 public sealed class HealthMonitorService : BackgroundService, IHealthMonitorService
 {
+    internal const string SnapshotClientMethod = "ReceiveSnapshot";
+
     private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
     private readonly HealthCheckService _healthCheckService;
@@ -99,7 +101,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 
         try
         {
-            await _hubContext.Clients.All.SendAsync("ReceiveSnapshot", snapshot, cancellationToken);
+            await _hubContext.Clients.All.SendAsync(SnapshotClientMethod, snapshot, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

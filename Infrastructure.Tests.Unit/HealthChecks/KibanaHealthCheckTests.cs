@@ -5,8 +5,7 @@ using Infrastructure.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
-using Moq;
-using Moq.Protected;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class KibanaHealthCheckTests
@@ -15,7 +14,7 @@ public sealed class KibanaHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsSuccess_ReturnsHealthy()
     {
         var check = new KibanaHealthCheck(BuildClient(HttpStatusCode.OK), GetDefaultOptions());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Kibana", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Kibana);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -25,8 +24,10 @@ public sealed class KibanaHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenKibanaIsDown_ReturnsUnhealthy()
     {
-        var check = new KibanaHealthCheck(BuildThrowingClient(new HttpRequestException("connection refused")), GetDefaultOptions());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Kibana", check, null, null) };
+        var check = new KibanaHealthCheck(
+            BuildThrowingClient(new HttpRequestException(TestValues.NewTransportFailureMessage())),
+            GetDefaultOptions());
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Kibana);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -37,30 +38,18 @@ public sealed class KibanaHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         var check = new KibanaHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable), GetDefaultOptions());
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("Kibana", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.Kibana);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Kibana = new Uri("http://localhost:5601") });
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Kibana = new Uri(TestValues.NewServiceAddress()) });
 
-    private static HttpClient BuildClient(HttpStatusCode statusCode)
-    {
-        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode));
-        return new HttpClient(handler.Object);
-    }
+    private static HttpClient BuildClient(HttpStatusCode statusCode) =>
+        StubHttpMessageHandler.RespondingWith(statusCode, string.Empty);
 
-    private static HttpClient BuildThrowingClient(Exception ex)
-    {
-        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-            .ThrowsAsync(ex);
-        return new HttpClient(handler.Object);
-    }
+    private static HttpClient BuildThrowingClient(Exception ex) =>
+        StubHttpMessageHandler.Throwing(ex);
 }

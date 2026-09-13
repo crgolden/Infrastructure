@@ -28,6 +28,6 @@ public sealed class LogoutTests
         var result = model.OnPost();
 
         var signOutResult = Assert.IsType<SignOutResult>(result);
-        Assert.Equal("/", signOutResult.Properties?.RedirectUri);
+        Assert.Equal(LogoutModel.SignedOutRedirectUri, signOutResult.Properties?.RedirectUri);
     }
 }

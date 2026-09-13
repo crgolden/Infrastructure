@@ -5,18 +5,19 @@ using Infrastructure.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class WMSvcHealthCheckTests
 {
-    private static IOptions<ServiceEndpointOptions> DefaultOptions => Options.Create(new ServiceEndpointOptions { WmsvcHost = "127.0.0.1", WmsvcPort = 8172 });
+    private static IOptions<ServiceEndpointOptions> DefaultOptions => Options.Create(new ServiceEndpointOptions { WmsvcHost = TestValues.LoopbackHost, WmsvcPort = TestValues.NewClosedLoopbackPort() });
 
     [Fact]
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()
     {
-        Func<TcpClient> factory = () => throw new SocketException(10061);
+        Func<TcpClient> factory = () => throw new SocketException((int)SocketError.ConnectionRefused);
         var check = new WMSvcHealthCheck(factory, DefaultOptions);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("WMSvc", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.WmSvc);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -26,10 +27,10 @@ public sealed class WMSvcHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionRefused_ReturnsUnhealthy()
     {
-        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = "127.0.0.1", WmsvcPort = 19998 });
+        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = TestValues.LoopbackHost, WmsvcPort = TestValues.NewClosedLoopbackPort() });
         Func<TcpClient> factory = () => new TcpClient();
         var check = new WMSvcHealthCheck(factory, options);
-        var context = new HealthCheckContext { Registration = new HealthCheckRegistration("WMSvc", check, null, null) };
+        var context = HealthCheckContexts.Create(check, HealthCheckNames.WmSvc);
 
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
@@ -39,14 +40,14 @@ public sealed class WMSvcHealthCheckTests
     [Fact]
     public void Constructor_WhenHostIsMissing_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = null, WmsvcPort = 8172 });
+        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = null, WmsvcPort = TestValues.NewClosedLoopbackPort() });
         Assert.Throws<InvalidOperationException>(() => new WMSvcHealthCheck(() => new TcpClient(), options));
     }
 
     [Fact]
     public void Constructor_WhenPortIsNull_ThrowsInvalidOperationException()
     {
-        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = "localhost", WmsvcPort = null });
+        var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = TestValues.LoopbackHost, WmsvcPort = null });
         Assert.Throws<InvalidOperationException>(() => new WMSvcHealthCheck(() => new TcpClient(), options));
     }
 
@@ -58,10 +59,10 @@ public sealed class WMSvcHealthCheckTests
         int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
         try
         {
-            var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = "127.0.0.1", WmsvcPort = port });
+            var options = Options.Create(new ServiceEndpointOptions { WmsvcHost = TestValues.LoopbackHost, WmsvcPort = port });
             Func<TcpClient> factory = () => new TcpClient();
             var check = new WMSvcHealthCheck(factory, options);
-            var context = new HealthCheckContext { Registration = new HealthCheckRegistration("WMSvc", check, null, null) };
+            var context = HealthCheckContexts.Create(check, HealthCheckNames.WmSvc);
 
             var result = await check.CheckHealthAsync(context, CancellationToken.None);
 

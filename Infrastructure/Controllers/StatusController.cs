@@ -21,6 +21,6 @@ public sealed class StatusController : ControllerBase
     public ActionResult<HealthSnapshot> Get()
     {
         var snapshot = _healthMonitorService.LastSnapshot;
-        return snapshot is null ? StatusCode(503) : Ok(snapshot);
+        return snapshot is null ? StatusCode(StatusCodes.Status503ServiceUnavailable) : Ok(snapshot);
     }
 }

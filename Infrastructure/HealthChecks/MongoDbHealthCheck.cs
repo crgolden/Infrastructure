@@ -6,6 +6,14 @@ using MongoDB.Driver;
 
 public sealed class MongoDbHealthCheck : IHealthCheck
 {
+    internal const string DatabaseName = "crgolden";
+
+    internal const string PingCommandName = "ping";
+
+    internal const string CommandOkField = "ok";
+
+    internal const string HealthyDescription = "Ping OK";
+
     private readonly IMongoClient _mongoClient;
 
     public MongoDbHealthCheck(IMongoClient mongoClient)
@@ -17,11 +25,11 @@ public sealed class MongoDbHealthCheck : IHealthCheck
     {
         try
         {
-            var db = _mongoClient.GetDatabase("crgolden");
-            var document = new BsonDocument("ping", 1);
+            var db = _mongoClient.GetDatabase(DatabaseName);
+            var document = new BsonDocument(PingCommandName, 1);
             var command = new BsonDocumentCommand<BsonDocument>(document);
             await db.RunCommandAsync(command, cancellationToken: cancellationToken);
-            return HealthCheckResult.Healthy("Ping OK");
+            return HealthCheckResult.Healthy(HealthyDescription);
         }
         catch (Exception ex)
         {

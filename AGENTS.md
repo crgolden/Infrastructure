@@ -88,9 +88,14 @@ performs the actual email delivery. This repo never sends mail itself.
 1. Add the check under `HealthChecks/`. Extend `SiblingAppHealthCheck` if the target is a sibling app with
    a `/health` endpoint; otherwise implement `IHealthCheck` and take its client by constructor injection.
 2. Register it in `Program.cs` beside the others, with its typed `HttpClient` or factory if it needs one.
-3. Add the configuration key(s) to `appsettings.json` with a `null` value.
+   Its display name is a constant in `HealthChecks/HealthCheckNames.cs`, the one home for registration
+   names; tests read that constant rather than restating the string.
+3. Add the configuration key(s) to `appsettings.json` with a `null` value, and expose the key as a
+   `ConfigurationKey` constant on the check, as the HTTP checks do.
 4. Document the key in README.md's configuration tables and the service in its monitored-services table.
-5. Add unit tests covering healthy, unhealthy, and throwing-dependency paths — see TESTING.md.
+5. Add unit tests covering healthy, unhealthy, and throwing-dependency paths — see TESTING.md. HTTP checks
+   take their client from `StubHttpMessageHandler.RespondingWith(...)`/`.Throwing(...)`, never from a
+   `Mock<HttpMessageHandler>.Protected()` setup, and build their context through `HealthCheckContexts.Create`.
 
 ## Gotchas
 
