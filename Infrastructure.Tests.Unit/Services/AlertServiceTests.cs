@@ -17,7 +17,8 @@ public sealed class AlertServiceTests
         var recipientAddress = $"{Guid.NewGuid()}@test.invalid";
         var unhealthyServiceName = $"service-{Guid.NewGuid()}";
         var failureDetail = $"detail-{Guid.NewGuid()}";
-        var expectedSubject = $"{AlertService.AlertSubjectPrefix} {unhealthyServiceName} is {ServiceStatus.Unhealthy}";
+        var expectedSubject =
+            $"{AlertService.AlertSubjectPrefix} {unhealthyServiceName} {AlertService.SubjectStatusSeparator} {ServiceStatus.Unhealthy}";
         var (service, senderMock) = BuildService(recipientAddress);
         var result = new ServiceHealthResult(
             unhealthyServiceName,
@@ -48,7 +49,8 @@ public sealed class AlertServiceTests
         var recipientAddress = $"{Guid.NewGuid()}@test.invalid";
         var recoveredServiceName = $"service-{Guid.NewGuid()}";
         var recoveryDetail = $"detail-{Guid.NewGuid()}";
-        var expectedSubject = $"{AlertService.RecoverySubjectPrefix} {recoveredServiceName} is {ServiceStatus.Healthy}";
+        var expectedSubject =
+            $"{AlertService.RecoverySubjectPrefix} {recoveredServiceName} {AlertService.SubjectStatusSeparator} {ServiceStatus.Healthy}";
         var (service, senderMock) = BuildService(recipientAddress);
         var result = new ServiceHealthResult(
             recoveredServiceName,

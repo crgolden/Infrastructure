@@ -13,6 +13,8 @@ public sealed class AlertService : IAlertService
 
     internal const string RecoverySubjectPrefix = "[RECOVERY]";
 
+    internal const string SubjectStatusSeparator = "is";
+
     internal const string ServiceBusClientName = "crgolden";
 
     internal const string EmailQueueName = "email";
@@ -41,7 +43,7 @@ public sealed class AlertService : IAlertService
                         <p><strong>Detected at:</strong> {result.CheckedAt:O}</p>
                         """;
         await SendEmailAsync(
-            subject: $"{AlertSubjectPrefix} {result.Name} is {result.Status}",
+            subject: $"{AlertSubjectPrefix} {result.Name} {SubjectStatusSeparator} {result.Status}",
             htmlBody: htmlBody,
             cancellationToken: cancellationToken);
     }
@@ -56,7 +58,7 @@ public sealed class AlertService : IAlertService
                         <p><strong>Recovered at:</strong> {result.CheckedAt:O}</p>
                         """;
         await SendEmailAsync(
-            subject: $"{RecoverySubjectPrefix} {result.Name} is {result.Status}",
+            subject: $"{RecoverySubjectPrefix} {result.Name} {SubjectStatusSeparator} {result.Status}",
             htmlBody: htmlBody,
             cancellationToken: cancellationToken);
     }
