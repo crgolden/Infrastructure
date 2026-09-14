@@ -14,6 +14,8 @@ public sealed class KeepaliveServiceTests
 {
     private const string SendAsyncMethod = "SendAsync";
 
+    private static readonly TimeSpan MissedPingSignalTimeout = TimeSpan.FromSeconds(30);
+
     private static readonly string PingHostname = TestValues.NewHostname();
 
     [Fact]
@@ -24,12 +26,11 @@ public sealed class KeepaliveServiceTests
         using var httpClient = new HttpClient(handlerMock.Object);
         var timeProvider = new FakeTimeProvider();
         var pingInterval = TestValues.NewPingInterval();
-        var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
+        using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
-        using var cts = new CancellationTokenSource();
-        await svc.StartAsync(cts.Token);
+        await svc.StartAsync(TestContext.Current.CancellationToken);
         timeProvider.Advance(pingInterval);
-        await cts.CancelAsync();
+        await svc.StopAsync(TestContext.Current.CancellationToken);
 
         handlerMock.Protected()
             .Verify(
@@ -59,13 +60,12 @@ public sealed class KeepaliveServiceTests
         using var httpClient = new HttpClient(handlerMock.Object);
         var timeProvider = new FakeTimeProvider();
         var pingInterval = TestValues.NewPingInterval();
-        var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
+        using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
-        using var cts = new CancellationTokenSource();
-        await svc.StartAsync(cts.Token);
+        await svc.StartAsync(TestContext.Current.CancellationToken);
         timeProvider.Advance(pingInterval);
-        await pinged.Task.WaitAsync(TestContext.Current.CancellationToken);
-        await cts.CancelAsync();
+        await pinged.Task.WaitAsync(MissedPingSignalTimeout, TestContext.Current.CancellationToken);
+        await svc.StopAsync(TestContext.Current.CancellationToken);
 
         handlerMock.Protected()
             .Verify(
@@ -96,13 +96,12 @@ public sealed class KeepaliveServiceTests
         using var httpClient = new HttpClient(handlerMock.Object);
         var timeProvider = new FakeTimeProvider();
         var pingInterval = TestValues.NewPingInterval();
-        var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
+        using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
-        using var cts = new CancellationTokenSource();
-        await svc.StartAsync(cts.Token);
+        await svc.StartAsync(TestContext.Current.CancellationToken);
         timeProvider.Advance(pingInterval);
-        await pinged.Task.WaitAsync(TestContext.Current.CancellationToken);
-        await cts.CancelAsync();
+        await pinged.Task.WaitAsync(MissedPingSignalTimeout, TestContext.Current.CancellationToken);
+        await svc.StopAsync(TestContext.Current.CancellationToken);
 
         handlerMock.Protected()
             .Verify(
