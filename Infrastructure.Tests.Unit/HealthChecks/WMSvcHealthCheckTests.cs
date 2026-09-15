@@ -54,7 +54,7 @@ public sealed class WMSvcHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionSucceeds_ReturnsHealthy()
     {
-        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        using var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
         listener.Start();
         int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
         try

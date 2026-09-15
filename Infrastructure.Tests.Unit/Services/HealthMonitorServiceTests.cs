@@ -3,12 +3,12 @@ namespace Infrastructure.Tests.Unit.Services;
 using Infrastructure;
 using Infrastructure.Hubs;
 using Infrastructure.Services;
-using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Models;
 using Moq;
+using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class HealthMonitorServiceTests
