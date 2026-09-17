@@ -18,6 +18,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_StoresSnapshotAfterFirstPoll()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy));
@@ -40,17 +41,20 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
+        // Assert
         Assert.NotNull(svc.LastSnapshot);
     }
 
     [Fact]
     public async Task ExecuteAsync_SendsAlertWhenServiceIsUnhealthyOnFirstPoll()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Unhealthy));
@@ -75,6 +79,7 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await alertSent.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -90,6 +95,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_SendsAlertWhenServiceTransitionsToUnhealthy()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
@@ -119,6 +125,7 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await alertSent.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -134,6 +141,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_SendsRecoveryWhenServiceReturnsToHealthy()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
@@ -166,6 +174,7 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await recoverySent.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -181,6 +190,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_PushesSnapshotToHub()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy));
@@ -203,6 +213,7 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -219,20 +230,26 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public void Constructor_WhenIntervalSecondsIsNull_ThrowsInvalidOperationException()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
         var alertService = new Mock<IAlertService>(MockBehavior.Strict);
 
-        Assert.Throws<InvalidOperationException>(() => new HealthMonitorService(
+        // Act
+        var exception = Record.Exception(() => new HealthMonitorService(
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
             Options.Create(new MonitoringOptions { IntervalSeconds = null })));
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
     }
 
     [Fact]
     public async Task ExecuteAsync_WithDegradedService_MapsToDegradedStatus()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Degraded));
@@ -255,11 +272,13 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
+        // Assert
         Assert.NotNull(svc.LastSnapshot);
         Assert.Contains(svc.LastSnapshot.Results, r => r.Status == ServiceStatus.Degraded);
     }
@@ -267,6 +286,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_ContinuesPollingWhenCheckHealthAsyncThrows()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
@@ -294,11 +314,13 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await snapshotPushed.Task.WaitAsync(TestContext.Current.CancellationToken);
         await cts.CancelAsync();
 
+        // Assert
         Assert.NotNull(svc.LastSnapshot);
         clientProxy.Verify(
             c => c.SendCoreAsync(
@@ -309,6 +331,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_ContinuesPollingWhenSignalRThrows()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildReport(HealthStatus.Unhealthy));
@@ -333,6 +356,7 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await alertSent.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -348,6 +372,7 @@ public sealed class HealthMonitorServiceTests
     [Fact]
     public async Task ExecuteAsync_ContinuesPollingWhenAlertServiceThrows()
     {
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
@@ -379,6 +404,7 @@ public sealed class HealthMonitorServiceTests
             alertService.Object,
             GetDefaultOptions());
 
+        // Act
         using var cts = new CancellationTokenSource();
         _ = svc.StartAsync(cts.Token);
         await recoverySent.Task.WaitAsync(TestContext.Current.CancellationToken);
@@ -400,6 +426,7 @@ public sealed class HealthMonitorServiceTests
             Telemetry.Metrics.HealthMonitorFailureCounterName);
 
         var pollFailureMessage = $"poll-failure-{Guid.NewGuid()}";
+        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))

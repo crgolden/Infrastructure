@@ -13,34 +13,43 @@ public sealed class IISHttpsHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccess_ReturnsHealthy()
     {
+        // Arrange
         var check = new IisHttpsHealthCheck(BuildClient(HttpStatusCode.OK), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.IisHttps);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
+        // Arrange
         var check = new IisHttpsHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.IisHttps);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
+        // Arrange
         var transportFailureMessage = TestValues.NewTransportFailureMessage();
         var check = new IisHttpsHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.IisHttps);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Equal(transportFailureMessage, result.Description);
     }

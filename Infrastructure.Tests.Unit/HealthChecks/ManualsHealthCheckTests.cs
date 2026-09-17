@@ -12,45 +12,57 @@ public sealed class ManualsHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccessAndBodyIsHealthy_ReturnsHealthy()
     {
+        // Arrange
         var check = new ManualsHealthCheck(BuildClient(HttpStatusCode.OK, SiblingAppHealthCheck.HealthyBody), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Manuals);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccessButBodyIsNotHealthy_ReturnsUnhealthy()
     {
+        // Arrange
         var check = new ManualsHealthCheck(BuildClient(HttpStatusCode.OK, TestValues.NewUnexpectedHealthBody()), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Manuals);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
+        // Arrange
         var check = new ManualsHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Manuals);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
+        // Arrange
         var transportFailureMessage = TestValues.NewTransportFailureMessage();
         var check = new ManualsHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Manuals);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Equal(transportFailureMessage, result.Description);
     }

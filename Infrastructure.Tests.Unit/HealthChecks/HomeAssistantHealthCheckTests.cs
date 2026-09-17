@@ -13,34 +13,43 @@ public sealed class HomeAssistantHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsSuccess_ReturnsHealthy()
     {
+        // Arrange
         var check = new HomeAssistantHealthCheck(BuildClient(HttpStatusCode.OK), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.HomeAssistant);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
+        // Arrange
         var check = new HomeAssistantHealthCheck(BuildClient(HttpStatusCode.InternalServerError), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.HomeAssistant);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
+        // Arrange
         var transportFailureMessage = TestValues.NewTransportFailureMessage();
         var check = new HomeAssistantHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.HomeAssistant);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Equal(transportFailureMessage, result.Description);
     }

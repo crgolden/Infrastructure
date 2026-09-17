@@ -109,7 +109,7 @@ One test class per health check. Each check accepts its external dependency via 
 |-------|---------------|
 | `AlertServiceTests` | `AlertService` — publishes alert/recovery `ServiceBusMessage`s to the `email` queue via mocked `IAzureClientFactory<ServiceBusClient>` / `ServiceBusSender` |
 | `HealthMonitorServiceTests` | `HealthMonitorService` — background poll loop: snapshot storage, SignalR broadcast, alert triggering; resilience: poll continues when `CheckHealthAsync` throws, SignalR throw does not block alerting, alert throw does not corrupt transition state |
-| `KeepaliveServiceTests` | `KeepaliveService` — no HTTP call when `WEBSITE_HOSTNAME` is unset; self-pings `/ping` when it is set |
+| `KeepaliveServiceTests` | `KeepaliveService` — no HTTP call when `WEBSITE_HOSTNAME` is unset; self-pings `/ping` when it is set; a failing ping leaves the loop unfaulted. Each timed case waits for `TimerSignalingTimeProvider` to report the delay timer before advancing the clock, and for the stub's first request before stopping, because a .NET 10 `StartAsync` returns before `ExecuteAsync` has run |
 
 ### `Controllers/`
 

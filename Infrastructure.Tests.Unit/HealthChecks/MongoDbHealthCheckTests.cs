@@ -13,6 +13,7 @@ public sealed class MongoDbHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenPingSucceeds_ReturnsHealthy()
     {
+        // Arrange
         var db = new Mock<IMongoDatabase>(MockBehavior.Strict);
         db.Setup(d => d.RunCommandAsync(
                 It.IsAny<BsonDocumentCommand<BsonDocument>>(),
@@ -26,14 +27,17 @@ public sealed class MongoDbHealthCheckTests
         var check = new MongoDbHealthCheck(client.Object);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenPingThrows_ReturnsUnhealthy()
     {
+        // Arrange
         var db = new Mock<IMongoDatabase>(MockBehavior.Strict);
         db.Setup(d => d.RunCommandAsync(
                 It.IsAny<BsonDocumentCommand<BsonDocument>>(),
@@ -52,14 +56,17 @@ public sealed class MongoDbHealthCheckTests
         var check = new MongoDbHealthCheck(client.Object);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenGetDatabaseThrows_ReturnsUnhealthy()
     {
+        // Arrange
         var client = new Mock<IMongoClient>(MockBehavior.Strict);
         client.Setup(c => c.GetDatabase(MongoDbHealthCheck.DatabaseName, It.IsAny<MongoDatabaseSettings>()))
             .Throws(new InvalidOperationException("not connected"));
@@ -67,8 +74,10 @@ public sealed class MongoDbHealthCheckTests
         var check = new MongoDbHealthCheck(client.Object);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 }

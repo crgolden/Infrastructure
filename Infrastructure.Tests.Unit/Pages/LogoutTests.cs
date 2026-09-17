@@ -11,10 +11,13 @@ public sealed class LogoutTests
     [Fact]
     public void OnPost_ReturnsSignOutResult_WithBothSchemes()
     {
+        // Arrange
         var model = new LogoutModel();
 
+        // Act
         var result = model.OnPost();
 
+        // Assert
         var signOutResult = Assert.IsType<SignOutResult>(result);
         Assert.Contains(CookieAuthenticationDefaults.AuthenticationScheme, signOutResult.AuthenticationSchemes);
         Assert.Contains(OpenIdConnectDefaults.AuthenticationScheme, signOutResult.AuthenticationSchemes);
@@ -23,10 +26,13 @@ public sealed class LogoutTests
     [Fact]
     public void OnPost_ReturnsSignOutResult_WithRedirectToRoot()
     {
+        // Arrange
         var model = new LogoutModel();
 
+        // Act
         var result = model.OnPost();
 
+        // Assert
         var signOutResult = Assert.IsType<SignOutResult>(result);
         Assert.Equal(LogoutModel.SignedOutRedirectUri, signOutResult.Properties?.RedirectUri);
     }

@@ -8,6 +8,8 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     private readonly string _content;
     private readonly Exception? _throwOnSend;
     private readonly List<Uri?> _requestedUris = [];
+    private readonly TaskCompletionSource _firstRequest =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private StubHttpMessageHandler(HttpStatusCode statusCode, string content, Exception? throwOnSend)
     {
@@ -17,6 +19,8 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     }
 
     internal IReadOnlyList<Uri?> RequestedUris => _requestedUris;
+
+    internal Task FirstRequest => _firstRequest.Task;
 
     internal static HttpClient RespondingWith(HttpStatusCode statusCode, string content) =>
         new HttpClient(new StubHttpMessageHandler(statusCode, content, throwOnSend: null));
@@ -37,6 +41,7 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
         CancellationToken cancellationToken)
     {
         _requestedUris.Add(request.RequestUri);
+        _firstRequest.TrySetResult();
 
         if (_throwOnSend is not null)
         {

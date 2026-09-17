@@ -14,6 +14,7 @@ public sealed class KeepaliveServiceTests
     [Fact]
     public async Task ExecuteAsync_WhenHostnameIsNull_ReturnsWithoutCallingHttp()
     {
+        // Arrange
         var config = new ConfigurationBuilder().Build();
         using var handler = StubHttpMessageHandler.Recording();
         using var httpClient = handler.ToClient();
@@ -21,46 +22,60 @@ public sealed class KeepaliveServiceTests
         var pingInterval = TestValues.NewPingInterval();
         using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
+        // Act
         await svc.StartAsync(TestContext.Current.CancellationToken);
         timeProvider.Advance(pingInterval);
         await svc.StopAsync(TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Empty(handler.RequestedUris);
     }
 
     [Fact]
     public async Task ExecuteAsync_WhenHostnameIsSet_CallsGetAsync()
     {
+        // Arrange
         var config = ConfigurationWithHostname();
         using var handler = StubHttpMessageHandler.Recording();
         using var httpClient = handler.ToClient();
-        var timeProvider = new FakeTimeProvider();
+        var timeProvider = new TimerSignalingTimeProvider();
         var pingInterval = TestValues.NewPingInterval();
         using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
+        // Act
         await svc.StartAsync(TestContext.Current.CancellationToken);
+        await timeProvider.FirstTimerCreated;
         timeProvider.Advance(pingInterval);
+        await handler.FirstRequest;
         await svc.StopAsync(TestContext.Current.CancellationToken);
 
+        // Assert
         Assert.Contains(KeepaliveService.PingUri(PingHostname), handler.RequestedUris);
     }
 
     [Fact]
     public async Task ExecuteAsync_WhenGetAsyncThrows_DoesNotPropagateException()
     {
+        // Arrange
         var config = ConfigurationWithHostname();
         using var handler = StubHttpMessageHandler.RecordingAndThrowing(
             new HttpRequestException(TestValues.NewTransportFailureMessage()));
         using var httpClient = handler.ToClient();
-        var timeProvider = new FakeTimeProvider();
+        var timeProvider = new TimerSignalingTimeProvider();
         var pingInterval = TestValues.NewPingInterval();
         using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
+        // Act
         await svc.StartAsync(TestContext.Current.CancellationToken);
+        await timeProvider.FirstTimerCreated;
         timeProvider.Advance(pingInterval);
+        await handler.FirstRequest;
         await svc.StopAsync(TestContext.Current.CancellationToken);
 
-        Assert.NotEmpty(handler.RequestedUris);
+        // Assert
+        var executeTask = svc.ExecuteTask;
+        Assert.NotNull(executeTask);
+        Assert.False(executeTask.IsFaulted);
     }
 
     private static IConfiguration ConfigurationWithHostname() =>

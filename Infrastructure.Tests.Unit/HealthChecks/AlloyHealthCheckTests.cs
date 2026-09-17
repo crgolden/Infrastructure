@@ -20,18 +20,22 @@ public sealed class AlloyHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()
     {
+        // Arrange
         Func<TcpClient> factory = () => throw new SocketException((int)SocketError.ConnectionRefused);
         var check = new AlloyHealthCheck(factory, DefaultOptions);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Alloy);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionRefused_ReturnsUnhealthy()
     {
+        // Arrange
         var options = Options.Create(new ServiceEndpointOptions
         {
             AlloyHost = TestValues.LoopbackHost,
@@ -41,36 +45,51 @@ public sealed class AlloyHealthCheckTests
         var check = new AlloyHealthCheck(factory, options);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Alloy);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public void Constructor_WhenHostIsMissing_ThrowsInvalidOperationException()
     {
+        // Arrange
         var options = Options.Create(new ServiceEndpointOptions
         {
             AlloyHost = null,
             AlloyPort = TestValues.NewClosedLoopbackPort(),
         });
-        Assert.Throws<InvalidOperationException>(() => new AlloyHealthCheck(() => new TcpClient(), options));
+
+        // Act
+        var exception = Record.Exception(() => new AlloyHealthCheck(() => new TcpClient(), options));
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
     }
 
     [Fact]
     public void Constructor_WhenPortIsNull_ThrowsInvalidOperationException()
     {
+        // Arrange
         var options = Options.Create(new ServiceEndpointOptions
         {
             AlloyHost = TestValues.LoopbackHost,
             AlloyPort = null,
         });
-        Assert.Throws<InvalidOperationException>(() => new AlloyHealthCheck(() => new TcpClient(), options));
+
+        // Act
+        var exception = Record.Exception(() => new AlloyHealthCheck(() => new TcpClient(), options));
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionSucceeds_ReturnsHealthy()
     {
+        // Arrange
         using var listener = new TcpListener(System.Net.IPAddress.Loopback, 0);
         listener.Start();
         int port = ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
@@ -85,8 +104,10 @@ public sealed class AlloyHealthCheckTests
             var check = new AlloyHealthCheck(factory, options);
             var context = HealthCheckContexts.Create(check, HealthCheckNames.Alloy);
 
+            // Act
             var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+            // Assert
             Assert.Equal(HealthStatus.Healthy, result.Status);
         }
         finally

@@ -13,13 +13,16 @@ public sealed class SqlServerHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()
     {
+        // Arrange
         var failureMessage = TestValues.NewFailureMessage();
         Func<SqlConnection> factory = () => throw new InvalidOperationException(failureMessage);
         var check = new SqlServerHealthCheck(factory);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.Equal(failureMessage, result.Description);
     }
@@ -27,18 +30,22 @@ public sealed class SqlServerHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenConnectionStringIsInvalid_ReturnsUnhealthy()
     {
+        // Arrange
         Func<SqlConnection> factory = () => new SqlConnection(UnreachableSqlConnectionString());
         var check = new SqlServerHealthCheck(factory);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
     [Fact]
     public async Task CheckHealthAsync_WhenQuerySucceeds_ReturnsHealthy()
     {
+        // Arrange
         var mockCmd = new Mock<IDbCommand>();
         mockCmd.SetupSet(c => c.CommandText = It.IsAny<string>());
         mockCmd.Setup(c => c.ExecuteScalar()).Returns(1);
@@ -49,8 +56,10 @@ public sealed class SqlServerHealthCheckTests
         var check = new SqlServerHealthCheck(factory);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
         Assert.Equal(RelationalHealthCheck.HealthyDescription, result.Description);
     }
@@ -58,6 +67,7 @@ public sealed class SqlServerHealthCheckTests
     [Fact]
     public async Task CheckHealthAsync_WhenFirstAttemptThrowsAndSecondSucceeds_ReturnsHealthy()
     {
+        // Arrange
         var transientFailureMessage = $"transient-{Guid.NewGuid()}";
         var remainingAttempts = new Queue<Func<IDbConnection>>(
         [
@@ -67,8 +77,10 @@ public sealed class SqlServerHealthCheckTests
         var check = new SqlServerHealthCheck(() => remainingAttempts.Dequeue()());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
+        // Act
         var result = await check.CheckHealthAsync(context, CancellationToken.None);
 
+        // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
         Assert.Equal(RelationalHealthCheck.HealthyDescription, result.Description);
         Assert.Empty(remainingAttempts);
