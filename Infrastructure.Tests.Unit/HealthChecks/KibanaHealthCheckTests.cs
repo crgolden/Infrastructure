@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
+using Infrastructure.Models;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class KibanaHealthCheckTests
@@ -29,7 +29,7 @@ public sealed class KibanaHealthCheckTests
     {
         // Arrange
         var check = new KibanaHealthCheck(
-            BuildThrowingClient(new HttpRequestException(TestValues.NewTransportFailureMessage())),
+            BuildThrowingClient(new HttpRequestException(Generated.NewTransportFailureMessage())),
             GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Kibana);
 
@@ -54,7 +54,7 @@ public sealed class KibanaHealthCheckTests
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Kibana = new Uri(TestValues.NewServiceAddress()) });
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Kibana = new Uri(Generated.NewServiceAddress()) });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode) =>
         StubHttpMessageHandler.RespondingWith(statusCode, string.Empty);

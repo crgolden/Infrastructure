@@ -1,10 +1,10 @@
 namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using Infrastructure.HealthChecks;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
 using StackExchange.Redis;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class RedisHealthCheckTests
@@ -36,7 +36,7 @@ public sealed class RedisHealthCheckTests
         var db = new Mock<IDatabase>(MockBehavior.Strict);
         db.Setup(d => d.PingAsync(It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisConnectionException(
-                ConnectionFailureType.UnableToConnect, CommandFlags.None, TestValues.NewFailureMessage()));
+                ConnectionFailureType.UnableToConnect, CommandFlags.None, Generated.NewFailureMessage()));
         var muxer = new Mock<IConnectionMultiplexer>(MockBehavior.Strict);
         muxer.Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
 

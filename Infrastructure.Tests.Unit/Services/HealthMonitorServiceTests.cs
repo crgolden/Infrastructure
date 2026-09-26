@@ -2,18 +2,20 @@ namespace Infrastructure.Tests.Unit.Services;
 
 using Infrastructure;
 using Infrastructure.Hubs;
+using Infrastructure.Models;
 using Infrastructure.Services;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
 using Moq;
-using TestSupport;
 
 [Trait("Category", "Unit")]
-public sealed class HealthMonitorServiceTests
+public sealed class HealthMonitorServiceTests : IDisposable
 {
-    private static readonly string MonitoredServiceName = TestValues.NewMonitoredServiceName();
+    private static readonly string MonitoredServiceName = Generated.NewMonitoredServiceName();
+
+    private readonly TelemetryHarness _harness = new();
 
     [Fact]
     public async Task ExecuteAsync_StoresSnapshotAfterFirstPoll()
@@ -39,7 +41,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -77,7 +80,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -123,7 +127,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -172,7 +177,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -211,7 +217,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -240,7 +247,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            Options.Create(new MonitoringOptions { IntervalSeconds = null })));
+            Options.Create(new MonitoringOptions { IntervalSeconds = null }),
+            _harness.Telemetry));
 
         // Assert
         Assert.IsType<InvalidOperationException>(exception);
@@ -270,7 +278,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -290,7 +299,7 @@ public sealed class HealthMonitorServiceTests
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException(TestValues.NewFailureMessage()))
+            .ThrowsAsync(new InvalidOperationException(Generated.NewFailureMessage()))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy))
             .ReturnsAsync(BuildReport(HealthStatus.Healthy))
@@ -312,7 +321,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -354,7 +364,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -402,7 +413,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -422,11 +434,10 @@ public sealed class HealthMonitorServiceTests
     {
         // Arrange
         using var capture = new CounterCapture(
-            Telemetry.Metrics.MeterName,
+            _harness.MeterFactory,
             Telemetry.Metrics.HealthMonitorFailureCounterName);
 
         var pollFailureMessage = $"poll-failure-{Guid.NewGuid()}";
-        // Arrange
         var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
         healthCheckService
             .SetupSequence(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
@@ -450,7 +461,8 @@ public sealed class HealthMonitorServiceTests
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            GetDefaultOptions());
+            GetDefaultOptions(),
+            _harness.Telemetry);
 
         // Act
         using var cts = new CancellationTokenSource();
@@ -467,6 +479,8 @@ public sealed class HealthMonitorServiceTests
             measurement.Tags[Telemetry.Metrics.ExceptionTypeTagName]);
     }
 
+    public void Dispose() => _harness.Dispose();
+
     private static IOptions<MonitoringOptions> GetDefaultOptions() =>
         Options.Create(new MonitoringOptions { IntervalSeconds = 1 });
 
@@ -476,7 +490,7 @@ public sealed class HealthMonitorServiceTests
         return new HealthReport(
             new Dictionary<string, HealthReportEntry>
             {
-                [serviceName] = new(status, TestValues.NewServiceDescription(), TimeSpan.Zero, null, null),
+                [serviceName] = new(status, Generated.NewMonitoredServiceDescription(), TimeSpan.Zero, null, null),
             },
             TimeSpan.Zero);
     }

@@ -1,6 +1,6 @@
 namespace Infrastructure.Services;
 
-using Models;
+using Infrastructure.Models;
 
 public interface IHealthMonitorService
 {

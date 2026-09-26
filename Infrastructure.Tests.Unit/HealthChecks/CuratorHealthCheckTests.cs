@@ -2,9 +2,9 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class CuratorHealthCheckTests
@@ -27,7 +27,7 @@ public sealed class CuratorHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsSuccessButBodyIsNotHealthy_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new CuratorHealthCheck(BuildClient(HttpStatusCode.OK, TestValues.NewUnexpectedHealthBody()), GetDefaultConfiguration());
+        var check = new CuratorHealthCheck(BuildClient(HttpStatusCode.OK, Generated.NewUnexpectedHealthBody()), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Curator);
 
         // Act
@@ -55,7 +55,7 @@ public sealed class CuratorHealthCheckTests
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
         // Arrange
-        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var transportFailureMessage = Generated.NewTransportFailureMessage();
         var check = new CuratorHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Curator);
 
@@ -69,7 +69,7 @@ public sealed class CuratorHealthCheckTests
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { [CuratorHealthCheck.ConfigurationKey] = TestValues.NewServiceAddress() })
+            .AddInMemoryCollection(new Dictionary<string, string?> { [CuratorHealthCheck.ConfigurationKey] = Generated.NewServiceAddress() })
             .Build();
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content) =>

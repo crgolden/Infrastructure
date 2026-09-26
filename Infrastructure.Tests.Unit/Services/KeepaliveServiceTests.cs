@@ -2,14 +2,14 @@ namespace Infrastructure.Tests.Unit.Services;
 
 using System.Net.Http;
 using Infrastructure.Services;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Time.Testing;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class KeepaliveServiceTests
 {
-    private static readonly string PingHostname = TestValues.NewHostname();
+    private static readonly string PingHostname = Generated.NewHostname();
 
     [Fact]
     public async Task ExecuteAsync_WhenHostnameIsNull_ReturnsWithoutCallingHttp()
@@ -19,7 +19,7 @@ public sealed class KeepaliveServiceTests
         using var handler = StubHttpMessageHandler.Recording();
         using var httpClient = handler.ToClient();
         var timeProvider = new FakeTimeProvider();
-        var pingInterval = TestValues.NewPingInterval();
+        var pingInterval = Generated.NewPingInterval();
         using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
         // Act
@@ -39,7 +39,7 @@ public sealed class KeepaliveServiceTests
         using var handler = StubHttpMessageHandler.Recording();
         using var httpClient = handler.ToClient();
         var timeProvider = new TimerSignalingTimeProvider();
-        var pingInterval = TestValues.NewPingInterval();
+        var pingInterval = Generated.NewPingInterval();
         using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
         // Act
@@ -59,10 +59,10 @@ public sealed class KeepaliveServiceTests
         // Arrange
         var config = ConfigurationWithHostname();
         using var handler = StubHttpMessageHandler.RecordingAndThrowing(
-            new HttpRequestException(TestValues.NewTransportFailureMessage()));
+            new HttpRequestException(Generated.NewTransportFailureMessage()));
         using var httpClient = handler.ToClient();
         var timeProvider = new TimerSignalingTimeProvider();
-        var pingInterval = TestValues.NewPingInterval();
+        var pingInterval = Generated.NewPingInterval();
         using var svc = new KeepaliveService(httpClient, config, pingInterval, timeProvider);
 
         // Act

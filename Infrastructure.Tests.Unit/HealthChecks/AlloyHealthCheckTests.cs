@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net.Sockets;
 using Infrastructure.HealthChecks;
+using Infrastructure.Models;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class AlloyHealthCheckTests
@@ -13,8 +13,8 @@ public sealed class AlloyHealthCheckTests
     private static IOptions<ServiceEndpointOptions> DefaultOptions =>
         Options.Create(new ServiceEndpointOptions
         {
-            AlloyHost = TestValues.LoopbackHost,
-            AlloyPort = TestValues.NewClosedLoopbackPort(),
+            AlloyHost = Generated.LoopbackHost,
+            AlloyPort = Generated.NewClosedLoopbackPort(),
         });
 
     [Fact]
@@ -38,8 +38,8 @@ public sealed class AlloyHealthCheckTests
         // Arrange
         var options = Options.Create(new ServiceEndpointOptions
         {
-            AlloyHost = TestValues.LoopbackHost,
-            AlloyPort = TestValues.NewClosedLoopbackPort(),
+            AlloyHost = Generated.LoopbackHost,
+            AlloyPort = Generated.NewClosedLoopbackPort(),
         });
         Func<TcpClient> factory = () => new TcpClient();
         var check = new AlloyHealthCheck(factory, options);
@@ -59,7 +59,7 @@ public sealed class AlloyHealthCheckTests
         var options = Options.Create(new ServiceEndpointOptions
         {
             AlloyHost = null,
-            AlloyPort = TestValues.NewClosedLoopbackPort(),
+            AlloyPort = Generated.NewClosedLoopbackPort(),
         });
 
         // Act
@@ -75,7 +75,7 @@ public sealed class AlloyHealthCheckTests
         // Arrange
         var options = Options.Create(new ServiceEndpointOptions
         {
-            AlloyHost = TestValues.LoopbackHost,
+            AlloyHost = Generated.LoopbackHost,
             AlloyPort = null,
         });
 
@@ -97,7 +97,7 @@ public sealed class AlloyHealthCheckTests
         {
             var options = Options.Create(new ServiceEndpointOptions
             {
-                AlloyHost = TestValues.LoopbackHost,
+                AlloyHost = Generated.LoopbackHost,
                 AlloyPort = port,
             });
             Func<TcpClient> factory = () => new TcpClient();

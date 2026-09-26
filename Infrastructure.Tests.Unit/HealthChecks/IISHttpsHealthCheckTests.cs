@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
+using Infrastructure.Models;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class IISHttpsHealthCheckTests
@@ -42,7 +42,7 @@ public sealed class IISHttpsHealthCheckTests
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
         // Arrange
-        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var transportFailureMessage = Generated.NewTransportFailureMessage();
         var check = new IisHttpsHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.IisHttps);
 
@@ -54,7 +54,7 @@ public sealed class IISHttpsHealthCheckTests
         Assert.Equal(transportFailureMessage, result.Description);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { IisHttps = new Uri(TestValues.NewServiceAddress()) });
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { IisHttps = new Uri(Generated.NewServiceAddress()) });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode) =>
         StubHttpMessageHandler.RespondingWith(statusCode, string.Empty);

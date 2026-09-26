@@ -1,8 +1,8 @@
 namespace Infrastructure.HealthChecks;
 
+using Infrastructure.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
 
 public sealed class ElasticsearchHealthCheck : IHealthCheck
 {

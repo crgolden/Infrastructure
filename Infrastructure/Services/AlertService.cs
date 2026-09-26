@@ -1,9 +1,9 @@
 namespace Infrastructure.Services;
 
 using Azure.Messaging.ServiceBus;
+using Infrastructure.Models;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
-using Models;
 
 public sealed class AlertService : IAlertService
 {

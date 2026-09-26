@@ -128,6 +128,7 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" `
             /d:sonar.exclusions="**/bin/**,**/obj/**" `
             /d:sonar.coverage.exclusions="**/Program.cs" `
+            /d:sonar.qualitygate.wait=true `
             /d:sonar.scanner.skipJreProvisioning=true
 
       - name: Build with dotnet
@@ -135,11 +136,21 @@ jobs:
           NuGetPackageSourceCredentials_GitHub: Username=${{ github.actor }};Password=${{ secrets.PACKAGES_READ_TOKEN }}
         run: dotnet build --no-incremental --configuration Release /p:RestoreLockedMode=true
 
+      - name: ReSharper inspection (jb inspectcode)
+        run: |
+          dotnet jb inspectcode Infrastructure.slnx --no-build -e=WARNING --output=inspectcode.sarif
+          $results = @((Get-Content inspectcode.sarif -Raw | ConvertFrom-Json).runs | ForEach-Object { $_.results })
+          foreach ($result in $results) {
+            $location = $result.locations[0].physicalLocation
+            Write-Output "::error file=$($location.artifactLocation.uri),line=$($location.region.startLine)::$($result.ruleId) $($result.message.text)"
+          }
+          if ($results.Count -gt 0) { exit 1 }
+
       - name: Run unit tests with coverage
         run: |
           dotnet coverlet Infrastructure.Tests.Unit\bin\Release\net10.0 `
             --target "dotnet" `
-            --targetargs "test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net10.0/TestResults" `
+            --targetargs "test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net10.0/TestResults" `
             --format opencover --output "coverage.opencover.xml" `
             --skipautoprops `
             --exclude-by-attribute GeneratedCodeAttribute `

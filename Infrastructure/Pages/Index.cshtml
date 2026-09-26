@@ -1,5 +1,5 @@
 @page
-@model Infrastructure.Pages.IndexModel
+@model Infrastructure.Pages.Index
 @{
     ViewData["Title"] = "Dashboard";
 }
@@ -21,7 +21,7 @@
         <span class="fw-semibold">Alert Log</span>
         <button class="btn btn-sm btn-outline-secondary" id="clear-log-btn">Clear</button>
     </div>
-    <ul class="list-group list-group-flush" id="alert-log" style="max-height:320px;overflow-y:auto;">
+    <ul class="list-group list-group-flush" id="alert-log">
         <li class="list-group-item text-muted small">No events yet.</li>
     </ul>
 </div>

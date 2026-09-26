@@ -4,6 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 [Authorize]
-public sealed class IndexModel : PageModel
+public sealed class Index : PageModel
 {
 }

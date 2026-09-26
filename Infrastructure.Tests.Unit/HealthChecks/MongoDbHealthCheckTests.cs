@@ -1,11 +1,11 @@
 namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using Infrastructure.HealthChecks;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Moq;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class MongoDbHealthCheckTests
@@ -47,8 +47,8 @@ public sealed class MongoDbHealthCheckTests
                 new MongoDB.Driver.Core.Connections.ConnectionId(
                     new MongoDB.Driver.Core.Servers.ServerId(
                         new MongoDB.Driver.Core.Clusters.ClusterId(),
-                        new System.Net.DnsEndPoint(TestValues.LoopbackHost, TestValues.NewClosedLoopbackPort()))),
-                TestValues.NewFailureMessage()));
+                        new System.Net.DnsEndPoint(Generated.LoopbackHost, Generated.NewClosedLoopbackPort()))),
+                Generated.NewFailureMessage()));
 
         var client = new Mock<IMongoClient>(MockBehavior.Strict);
         client.Setup(c => c.GetDatabase(MongoDbHealthCheck.DatabaseName, It.IsAny<MongoDatabaseSettings>())).Returns(db.Object);

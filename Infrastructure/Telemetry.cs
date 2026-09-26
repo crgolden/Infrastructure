@@ -2,9 +2,30 @@ namespace Infrastructure;
 
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using Infrastructure.Models;
+using Microsoft.Extensions.Options;
 
-internal static class Telemetry
+public sealed class Telemetry
 {
+    private readonly Counter<long> _healthMonitorFailureCounter;
+
+    public Telemetry(IMeterFactory meterFactory, IOptions<TelemetryOptions> telemetryOptions)
+    {
+        var meter = meterFactory.Create(Metrics.MeterName, typeof(Telemetry).Assembly.GetName().Version?.ToString());
+        _healthMonitorFailureCounter = meter.CreateCounter<long>(
+            Metrics.HealthMonitorFailureCounterName,
+            description: telemetryOptions.Value.HealthMonitorFailureDescription);
+    }
+
+    public void HealthMonitorFailed(string stage, Exception exception) =>
+        _healthMonitorFailureCounter.Add(
+            1,
+            new TagList
+            {
+                { Metrics.StageTagName, stage },
+                { Metrics.ExceptionTypeTagName, exception.GetType().FullName },
+            });
+
     internal static class Metrics
     {
         public const string MeterName = nameof(Infrastructure);
@@ -20,21 +41,5 @@ internal static class Telemetry
         public const string SnapshotPushStage = "snapshot-push";
 
         public const string AlertSendStage = "alert-send";
-
-        private static readonly Meter Meter = new(MeterName, "1.0.0");
-
-        private static readonly Counter<long> HealthMonitorFailureCounter =
-            Meter.CreateCounter<long>(
-                HealthMonitorFailureCounterName,
-                description: "Exceptions caught and handled inside a health-monitor poll, split by which stage of the poll threw.");
-
-        public static void HealthMonitorFailed(string stage, Exception exception) =>
-            HealthMonitorFailureCounter.Add(
-                1,
-                new TagList
-                {
-                    { StageTagName, stage },
-                    { ExceptionTypeTagName, exception.GetType().FullName },
-                });
     }
 }

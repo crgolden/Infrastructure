@@ -91,6 +91,12 @@ One test class per health check. Each check accepts its external dependency via 
 | `GrafanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/health` → HTTP 200 |
 | `AlloyHealthCheckTests` | `Func<TcpClient>` | TCP connect to `AlloyHost:AlloyPort` |
 
+### `Extensions/`
+
+| Class | What it tests |
+|-------|---------------|
+| `HttpContextExtensionsTests` | `ListeningAddressUri`, the non-production OIDC redirect base: prefers an `https` listening address over an earlier `http` one, falls back to `http`, trims a trailing slash, and returns `null` when the server lists no address |
+
 ### `Hubs/`
 
 | Class | What it tests |

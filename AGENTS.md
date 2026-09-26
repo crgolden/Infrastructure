@@ -99,7 +99,8 @@ performs the actual email delivery. This repo never sends mail itself.
    a `/health` endpoint; otherwise implement `IHealthCheck` and take its client by constructor injection.
 2. Register it in `Program.cs` beside the others, with its typed `HttpClient` or factory if it needs one.
    Its display name is a constant in `HealthChecks/HealthCheckNames.cs`, the one home for registration
-   names; tests read that constant rather than restating the string.
+   names; tests read that constant rather than restating the string. Its tag is a constant in
+   `HealthChecks/HealthCheckTags.cs`; reuse an existing tag before adding one.
 3. Add the configuration key(s) to `appsettings.json` with a `null` value, and expose the key as a
    `ConfigurationKey` constant on the check, as the HTTP checks do.
 4. Document the key in README.md's configuration tables and the service in its monitored-services table.

@@ -2,9 +2,9 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class InventoryHealthCheckTests
@@ -27,7 +27,7 @@ public sealed class InventoryHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsSuccessButBodyIsNotHealthy_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new InventoryHealthCheck(BuildClient(HttpStatusCode.OK, TestValues.NewUnexpectedHealthBody()), GetDefaultConfiguration());
+        var check = new InventoryHealthCheck(BuildClient(HttpStatusCode.OK, Generated.NewUnexpectedHealthBody()), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Inventory);
 
         // Act
@@ -55,7 +55,7 @@ public sealed class InventoryHealthCheckTests
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
         // Arrange
-        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var transportFailureMessage = Generated.NewTransportFailureMessage();
         var check = new InventoryHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Inventory);
 
@@ -69,7 +69,7 @@ public sealed class InventoryHealthCheckTests
 
     private static IConfiguration GetDefaultConfiguration() =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { [InventoryHealthCheck.ConfigurationKey] = TestValues.NewServiceAddress() })
+            .AddInMemoryCollection(new Dictionary<string, string?> { [InventoryHealthCheck.ConfigurationKey] = Generated.NewServiceAddress() })
             .Build();
 
     private static HttpClient BuildClient(HttpStatusCode statusCode, string content) =>

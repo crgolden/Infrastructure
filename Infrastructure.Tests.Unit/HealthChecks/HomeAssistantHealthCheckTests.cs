@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
+using Infrastructure.Models;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class HomeAssistantHealthCheckTests
@@ -42,7 +42,7 @@ public sealed class HomeAssistantHealthCheckTests
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
         // Arrange
-        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var transportFailureMessage = Generated.NewTransportFailureMessage();
         var check = new HomeAssistantHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.HomeAssistant);
 
@@ -54,7 +54,7 @@ public sealed class HomeAssistantHealthCheckTests
         Assert.Equal(transportFailureMessage, result.Description);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { HomeAssistant = new Uri(TestValues.NewServiceAddress()) });
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { HomeAssistant = new Uri(Generated.NewServiceAddress()) });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode) =>
         StubHttpMessageHandler.RespondingWith(statusCode, string.Empty);

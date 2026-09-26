@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 [Authorize]
-public sealed class LogoutModel : PageModel
+public sealed class Logout : PageModel
 {
     internal const string SignedOutRedirectUri = "/";
 

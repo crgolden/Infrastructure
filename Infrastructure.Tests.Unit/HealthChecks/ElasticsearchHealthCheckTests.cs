@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Net;
 using Infrastructure.HealthChecks;
+using Infrastructure.Models;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class ElasticsearchHealthCheckTests
@@ -42,7 +42,7 @@ public sealed class ElasticsearchHealthCheckTests
     public async Task CheckHealthAsync_WhenExceptionThrown_ReturnsUnhealthy()
     {
         // Arrange
-        var transportFailureMessage = TestValues.NewTransportFailureMessage();
+        var transportFailureMessage = Generated.NewTransportFailureMessage();
         var check = new ElasticsearchHealthCheck(BuildThrowingClient(new HttpRequestException(transportFailureMessage)), GetDefaultOptions());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Elasticsearch);
 
@@ -54,7 +54,7 @@ public sealed class ElasticsearchHealthCheckTests
         Assert.Equal(transportFailureMessage, result.Description);
     }
 
-    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Elasticsearch = new Uri(TestValues.NewServiceAddress()) });
+    private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Elasticsearch = new Uri(Generated.NewServiceAddress()) });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode) =>
         StubHttpMessageHandler.RespondingWith(statusCode, string.Empty);

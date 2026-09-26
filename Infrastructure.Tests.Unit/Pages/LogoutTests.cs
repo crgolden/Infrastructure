@@ -12,7 +12,7 @@ public sealed class LogoutTests
     public void OnPost_ReturnsSignOutResult_WithBothSchemes()
     {
         // Arrange
-        var model = new LogoutModel();
+        var model = new Logout();
 
         // Act
         var result = model.OnPost();
@@ -27,13 +27,13 @@ public sealed class LogoutTests
     public void OnPost_ReturnsSignOutResult_WithRedirectToRoot()
     {
         // Arrange
-        var model = new LogoutModel();
+        var model = new Logout();
 
         // Act
         var result = model.OnPost();
 
         // Assert
         var signOutResult = Assert.IsType<SignOutResult>(result);
-        Assert.Equal(LogoutModel.SignedOutRedirectUri, signOutResult.Properties?.RedirectUri);
+        Assert.Equal(Logout.SignedOutRedirectUri, signOutResult.Properties?.RedirectUri);
     }
 }

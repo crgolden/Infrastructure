@@ -1,9 +1,9 @@
 namespace Infrastructure.HealthChecks;
 
 using System.Net.Sockets;
+using Infrastructure.Models;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
 
 public sealed class AlloyHealthCheck : IHealthCheck
 {

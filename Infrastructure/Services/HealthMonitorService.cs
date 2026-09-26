@@ -1,10 +1,10 @@
 namespace Infrastructure.Services;
 
-using Hubs;
+using Infrastructure.Hubs;
+using Infrastructure.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
-using Models;
 using OpenTelemetry;
 
 public sealed class HealthMonitorService : BackgroundService, IHealthMonitorService
@@ -16,6 +16,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
     private readonly HealthCheckService _healthCheckService;
     private readonly IHubContext<HealthHub> _hubContext;
     private readonly IAlertService _alertService;
+    private readonly Telemetry _telemetry;
     private readonly int _intervalSeconds;
 
     private HealthSnapshot? _lastSnapshot;
@@ -24,11 +25,13 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         HealthCheckService healthCheckService,
         IHubContext<HealthHub> hubContext,
         IAlertService alertService,
-        IOptions<MonitoringOptions> options)
+        IOptions<MonitoringOptions> options,
+        Telemetry telemetry)
     {
         _healthCheckService = healthCheckService;
         _hubContext = hubContext;
         _alertService = alertService;
+        _telemetry = telemetry;
         if (!options.Value.IntervalSeconds.HasValue)
         {
             throw new InvalidOperationException($"Invalid '{nameof(MonitoringOptions.IntervalSeconds)}'.");
@@ -81,7 +84,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
         catch (Exception ex)
         {
-            Telemetry.Metrics.HealthMonitorFailed(Telemetry.Metrics.PollStage, ex);
+            _telemetry.HealthMonitorFailed(Telemetry.Metrics.PollStage, ex);
             return;
         }
 
@@ -109,7 +112,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
         catch (Exception ex)
         {
-            Telemetry.Metrics.HealthMonitorFailed(Telemetry.Metrics.SnapshotPushStage, ex);
+            _telemetry.HealthMonitorFailed(Telemetry.Metrics.SnapshotPushStage, ex);
         }
 
         foreach (var result in results)
@@ -135,7 +138,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
             }
             catch (Exception ex)
             {
-                Telemetry.Metrics.HealthMonitorFailed(Telemetry.Metrics.AlertSendStage, ex);
+                _telemetry.HealthMonitorFailed(Telemetry.Metrics.AlertSendStage, ex);
             }
 
             _previousStatuses[result.Name] = current;

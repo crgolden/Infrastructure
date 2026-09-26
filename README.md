@@ -84,6 +84,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 |---|---|
 | `OidcAuthority` | Identity OIDC authority — also the Identity `/health` target |
 | `MonitoringOptions:IntervalSeconds` | Poll interval in seconds (default 30) |
+| `TelemetryOptions:HealthMonitorFailureDescription` | Description of the `infrastructure.health_monitor.failures` counter |
 | `ServiceEndpointOptions:IisHttps` | URL for IIS HTTPS check |
 | `ServiceEndpointOptions:Elasticsearch` | URL for Elasticsearch health check |
 | `ServiceEndpointOptions:Kibana` | URL for Kibana status check |

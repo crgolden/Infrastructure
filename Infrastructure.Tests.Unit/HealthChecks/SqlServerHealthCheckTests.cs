@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Data;
 using Infrastructure.HealthChecks;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class SqlServerHealthCheckTests
@@ -14,7 +14,7 @@ public sealed class SqlServerHealthCheckTests
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthy()
     {
         // Arrange
-        var failureMessage = TestValues.NewFailureMessage();
+        var failureMessage = Generated.NewFailureMessage();
         Func<SqlConnection> factory = () => throw new InvalidOperationException(failureMessage);
         var check = new SqlServerHealthCheck(factory);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
@@ -89,10 +89,10 @@ public sealed class SqlServerHealthCheckTests
     private static string UnreachableSqlConnectionString() =>
         new SqlConnectionStringBuilder
         {
-            DataSource = $"{TestValues.LoopbackHost},{TestValues.NewClosedLoopbackPort()}",
-            InitialCatalog = TestValues.NewDatabaseName(),
-            UserID = TestValues.NewUserId(),
-            Password = TestValues.NewPassword(),
+            DataSource = $"{Generated.LoopbackHost},{Generated.NewClosedLoopbackPort()}",
+            InitialCatalog = Generated.NewDatabaseName(),
+            UserID = Generated.NewSqlLogin(),
+            Password = Generated.NewPassword(),
             ConnectTimeout = 1,
             Encrypt = false,
         }.ConnectionString;

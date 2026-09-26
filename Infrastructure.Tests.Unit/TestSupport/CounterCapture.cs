@@ -10,13 +10,13 @@ internal sealed class CounterCapture : IDisposable
     private readonly TaskCompletionSource _firstMeasurement =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    public CounterCapture(string meterName, string instrumentName)
+    public CounterCapture(IMeterFactory meterFactory, string instrumentName)
     {
         _listener = new MeterListener
         {
             InstrumentPublished = (instrument, listener) =>
             {
-                if (string.Equals(instrument.Meter.Name, meterName, StringComparison.Ordinal)
+                if (ReferenceEquals(instrument.Meter.Scope, meterFactory)
                     && string.Equals(instrument.Name, instrumentName, StringComparison.Ordinal))
                 {
                     listener.EnableMeasurementEvents(instrument);
@@ -63,5 +63,3 @@ internal sealed class CounterCapture : IDisposable
         _firstMeasurement.TrySetResult();
     }
 }
-
-internal sealed record CapturedMeasurement(long Value, IReadOnlyDictionary<string, string?> Tags);

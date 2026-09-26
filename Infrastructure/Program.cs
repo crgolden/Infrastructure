@@ -1,4 +1,3 @@
-#pragma warning disable SA1200
 using System.Data;
 using System.Diagnostics;
 using System.Net;
@@ -19,10 +18,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Npgsql;
 using OpenTelemetry.Instrumentation.AspNetCore;
@@ -31,7 +29,6 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using StackExchange.Redis;
-#pragma warning restore SA1200
 
 Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
@@ -50,6 +47,7 @@ try
         postgreSqlConnectionStringBuilderSection = builder.Configuration.GetRequiredSection(nameof(NpgsqlConnectionStringBuilder));
     var sqlConnectionStringBuilder = sqlConnectionStringBuilderSection.Get<SqlConnectionStringBuilder>() ?? throw new InvalidOperationException($"Invalid '{nameof(SqlConnectionStringBuilder)}' configuration.");
     var postgreSqlConnectionStringBuilder = postgreSqlConnectionStringBuilderSection.Get<NpgsqlConnectionStringBuilder>() ?? throw new InvalidOperationException($"Invalid '{nameof(NpgsqlConnectionStringBuilder)}' configuration.");
+    var telemetryOptions = builder.Configuration.GetRequiredSection(nameof(TelemetryOptions)).Get<TelemetryOptions>() ?? throw new InvalidOperationException($"Invalid '{nameof(TelemetryOptions)}' configuration.");
     var redisHost = builder.Configuration.GetRequired<string>("RedisHost");
     var redisPort = builder.Configuration.GetRequired<int>("RedisPort");
     var redisSsl = builder.Configuration.GetRequired<bool>("RedisSsl");
@@ -123,7 +121,7 @@ try
                 }))
             .WithMetrics(meterProviderBuilder => meterProviderBuilder
                 .AddMeter("Microsoft.AspNetCore.Hosting")
-                .AddMeter(nameof(Infrastructure))
+                .AddMeter(Infrastructure.Telemetry.Metrics.MeterName)
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter(o => o.Endpoint = new Uri(builder.Configuration.GetRequired<string>("AlloyEndpoint"))))
             .WithTracing(tracerProviderBuilder => tracerProviderBuilder
@@ -145,11 +143,6 @@ try
     }
     else
     {
-        if (builder.Environment.IsDevelopment())
-        {
-            builder.Configuration.AddUserSecrets("aspnet-Infrastructure-3f7a2c1b-8e4d-4b9f-a6c3-2d1e5f8b9a0c");
-        }
-
         var serviceBusConnectionString = builder.Configuration.GetRequired<string>("ServiceBusConnectionString");
         builder.Services
             .AddSerilog((serviceProvider, loggerConfiguration) => loggerConfiguration
@@ -197,31 +190,33 @@ try
         .AddSingleton<IMongoClient>(_ => new MongoClient(mongoSettings))
         .AddTransient<Func<TcpClient>>(_ => () => new TcpClient())
         .AddHealthChecks()
-        .AddCheck<IisHttpsHealthCheck>(HealthCheckNames.IisHttps, tags: ["iis"])
-        .AddCheck<SqlServerHealthCheck>(HealthCheckNames.SqlServer, tags: ["database"])
-        .AddCheck<ElasticsearchHealthCheck>(HealthCheckNames.Elasticsearch, tags: ["search"])
-        .AddCheck<KibanaHealthCheck>(HealthCheckNames.Kibana, tags: ["analytics"])
-        .AddCheck<PlexHealthCheck>(HealthCheckNames.Plex, tags: ["media"])
-        .AddCheck<HomeAssistantHealthCheck>(HealthCheckNames.HomeAssistant, tags: ["home"])
-        .AddCheck<UptimeKumaHealthCheck>(HealthCheckNames.UptimeKuma, tags: ["monitoring"])
-        .AddCheck<GrafanaHealthCheck>(HealthCheckNames.Grafana, tags: ["monitoring"])
-        .AddCheck<AlloyHealthCheck>(HealthCheckNames.Alloy, tags: ["monitoring"])
-        .AddCheck<YawcamHealthCheck>(HealthCheckNames.Yawcam, tags: ["surveillance"])
-        .AddCheck<WMSvcHealthCheck>(HealthCheckNames.WmSvc, tags: ["service"])
-        .AddCheck<RedisHealthCheck>(HealthCheckNames.Redis, tags: ["cache"])
-        .AddCheck<MongoDbHealthCheck>(HealthCheckNames.MongoDb, tags: ["database"])
-        .AddCheck<PostgreSqlHealthCheck>(HealthCheckNames.PostgreSql, tags: ["database"])
-        .AddCheck<IdentityHealthCheck>(HealthCheckNames.Identity, tags: ["service"])
-        .AddCheck<ManualsHealthCheck>(HealthCheckNames.Manuals, tags: ["service"])
-        .AddCheck<InventoryHealthCheck>(HealthCheckNames.Inventory, tags: ["service"])
-        .AddCheck<ProductsHealthCheck>(HealthCheckNames.Products, tags: ["service"])
-        .AddCheck<ChurchesHealthCheck>(HealthCheckNames.Churches, tags: ["service"])
-        .AddCheck<DirectoryHealthCheck>(HealthCheckNames.Directory, tags: ["service"])
-        .AddCheck<CuratorHealthCheck>(HealthCheckNames.Curator, tags: ["service"])
-        .AddCheck<LibrarianHealthCheck>(HealthCheckNames.Librarian, tags: ["service"]).Services
+        .AddCheck<IisHttpsHealthCheck>(HealthCheckNames.IisHttps, tags: [HealthCheckTags.Iis])
+        .AddCheck<SqlServerHealthCheck>(HealthCheckNames.SqlServer, tags: [HealthCheckTags.Database])
+        .AddCheck<ElasticsearchHealthCheck>(HealthCheckNames.Elasticsearch, tags: [HealthCheckTags.Search])
+        .AddCheck<KibanaHealthCheck>(HealthCheckNames.Kibana, tags: [HealthCheckTags.Analytics])
+        .AddCheck<PlexHealthCheck>(HealthCheckNames.Plex, tags: [HealthCheckTags.Media])
+        .AddCheck<HomeAssistantHealthCheck>(HealthCheckNames.HomeAssistant, tags: [HealthCheckTags.Home])
+        .AddCheck<UptimeKumaHealthCheck>(HealthCheckNames.UptimeKuma, tags: [HealthCheckTags.Monitoring])
+        .AddCheck<GrafanaHealthCheck>(HealthCheckNames.Grafana, tags: [HealthCheckTags.Monitoring])
+        .AddCheck<AlloyHealthCheck>(HealthCheckNames.Alloy, tags: [HealthCheckTags.Monitoring])
+        .AddCheck<YawcamHealthCheck>(HealthCheckNames.Yawcam, tags: [HealthCheckTags.Surveillance])
+        .AddCheck<WMSvcHealthCheck>(HealthCheckNames.WmSvc, tags: [HealthCheckTags.Service])
+        .AddCheck<RedisHealthCheck>(HealthCheckNames.Redis, tags: [HealthCheckTags.Cache])
+        .AddCheck<MongoDbHealthCheck>(HealthCheckNames.MongoDb, tags: [HealthCheckTags.Database])
+        .AddCheck<PostgreSqlHealthCheck>(HealthCheckNames.PostgreSql, tags: [HealthCheckTags.Database])
+        .AddCheck<IdentityHealthCheck>(HealthCheckNames.Identity, tags: [HealthCheckTags.Service])
+        .AddCheck<ManualsHealthCheck>(HealthCheckNames.Manuals, tags: [HealthCheckTags.Service])
+        .AddCheck<InventoryHealthCheck>(HealthCheckNames.Inventory, tags: [HealthCheckTags.Service])
+        .AddCheck<ProductsHealthCheck>(HealthCheckNames.Products, tags: [HealthCheckTags.Service])
+        .AddCheck<ChurchesHealthCheck>(HealthCheckNames.Churches, tags: [HealthCheckTags.Service])
+        .AddCheck<DirectoryHealthCheck>(HealthCheckNames.Directory, tags: [HealthCheckTags.Service])
+        .AddCheck<CuratorHealthCheck>(HealthCheckNames.Curator, tags: [HealthCheckTags.Service])
+        .AddCheck<LibrarianHealthCheck>(HealthCheckNames.Librarian, tags: [HealthCheckTags.Service]).Services
         .AddSignalR()
         .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())).Services
         .AddSingleton<IAlertService, AlertService>()
+        .AddSingleton(Options.Create(telemetryOptions))
+        .AddSingleton<Infrastructure.Telemetry>()
         .AddSingleton<HealthMonitorService>()
         .AddSingleton<IHealthMonitorService>(sp => sp.GetRequiredService<HealthMonitorService>())
         .AddHostedService(sp => sp.GetRequiredService<HealthMonitorService>())
@@ -252,28 +247,14 @@ try
                 {
                     OnRedirectToIdentityProvider = context =>
                     {
-                        var server = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-                        var addresses = server.Features.GetRequiredFeature<IServerAddressesFeature>().Addresses;
-                        var address = addresses.FirstOrDefault(a => a.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                            ?? addresses.FirstOrDefault();
-                        if (!IsNullOrWhiteSpace(address))
-                        {
-                            context.ProtocolMessage.RedirectUri = address.TrimEnd('/') + options.CallbackPath;
-                        }
-
+                        context.ProtocolMessage.RedirectUri = context.HttpContext.ListeningAddressUri(options.CallbackPath)?.AbsoluteUri
+                            ?? context.ProtocolMessage.RedirectUri;
                         return Task.CompletedTask;
                     },
                     OnRedirectToIdentityProviderForSignOut = context =>
                     {
-                        var server = context.HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>();
-                        var addresses = server.Features.GetRequiredFeature<IServerAddressesFeature>().Addresses;
-                        var address = addresses.FirstOrDefault(a => a.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                            ?? addresses.FirstOrDefault();
-                        if (!IsNullOrWhiteSpace(address))
-                        {
-                            context.ProtocolMessage.PostLogoutRedirectUri = address.TrimEnd('/') + options.SignedOutCallbackPath;
-                        }
-
+                        context.ProtocolMessage.PostLogoutRedirectUri = context.HttpContext.ListeningAddressUri(options.SignedOutCallbackPath)?.AbsoluteUri
+                            ?? context.ProtocolMessage.PostLogoutRedirectUri;
                         return Task.CompletedTask;
                     }
                 };

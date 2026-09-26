@@ -2,10 +2,10 @@ namespace Infrastructure.Tests.Unit.Controllers;
 
 using Infrastructure.Controllers;
 using Infrastructure.HealthChecks;
+using Infrastructure.Models;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Models;
 using Moq;
 
 [Trait("Category", "Unit")]

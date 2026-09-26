@@ -2,9 +2,9 @@ namespace Infrastructure.Tests.Unit.HealthChecks;
 
 using System.Data;
 using Infrastructure.HealthChecks;
+using Infrastructure.Tests.Unit.TestSupport;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Moq;
-using TestSupport;
 
 [Trait("Category", "Unit")]
 public sealed class PostgreSqlHealthCheckTests
@@ -13,7 +13,7 @@ public sealed class PostgreSqlHealthCheckTests
     public async Task CheckHealthAsync_WhenFactoryThrows_ReturnsUnhealthyWithExceptionMessage()
     {
         // Arrange
-        var failureMessage = TestValues.NewFailureMessage();
+        var failureMessage = Generated.NewFailureMessage();
         var expected = new InvalidOperationException(failureMessage);
         Func<IDbConnection> factory = () => throw expected;
         var check = new PostgreSqlHealthCheck(factory);
@@ -31,7 +31,7 @@ public sealed class PostgreSqlHealthCheckTests
     public async Task CheckHealthAsync_WhenOpenThrowsOnEveryAttempt_ReturnsUnhealthyAfterRetryingOnce()
     {
         // Arrange
-        var failureMessage = TestValues.NewFailureMessage();
+        var failureMessage = Generated.NewFailureMessage();
         var mockConnection = new Mock<IDbConnection>(MockBehavior.Strict);
         mockConnection.Setup(c => c.Open()).Throws(new InvalidOperationException(failureMessage));
         mockConnection.Setup(c => c.Dispose());
@@ -53,7 +53,7 @@ public sealed class PostgreSqlHealthCheckTests
         // Arrange
         var mockCommand = new Mock<IDbCommand>(MockBehavior.Strict);
         mockCommand.SetupSet(c => c.CommandText = RelationalHealthCheck.ProbeCommandText);
-        var failureMessage = TestValues.NewFailureMessage();
+        var failureMessage = Generated.NewFailureMessage();
         mockCommand.Setup(c => c.ExecuteScalar()).Throws(new InvalidOperationException(failureMessage));
         mockCommand.Setup(c => c.Dispose());
         var mockConnection = new Mock<IDbConnection>(MockBehavior.Strict);

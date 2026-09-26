@@ -18,15 +18,13 @@
               integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
               crossorigin="anonymous" />
     </environment>
-
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100 bg-light">
     <header>
         <nav class="navbar navbar-expand-sm navbar-dark bg-dark border-bottom shadow-sm">
             <div class="container-fluid">
                 <a class="navbar-brand fw-bold" href="/">
-                    <span class="me-2">&#9642;</span>Infrastructure Monitor
+                    <span class="me-2 text-info">&#9642;</span>Infrastructure Monitor
                 </a>
                 <span class="navbar-text text-light small" id="last-updated">Waiting for data&hellip;</span>
                 <form method="post" asp-page="/Logout" class="ms-auto">
