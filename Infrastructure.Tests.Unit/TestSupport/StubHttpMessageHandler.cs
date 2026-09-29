@@ -5,13 +5,13 @@ using System.Net;
 internal sealed class StubHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
-    private readonly string _content;
+    private readonly string? _content;
     private readonly Exception? _throwOnSend;
     private readonly List<Uri?> _requestedUris = [];
     private readonly TaskCompletionSource _firstRequest =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-    private StubHttpMessageHandler(HttpStatusCode statusCode, string content, Exception? throwOnSend)
+    private StubHttpMessageHandler(HttpStatusCode statusCode, string? content, Exception? throwOnSend)
     {
         _statusCode = statusCode;
         _content = content;
@@ -25,14 +25,17 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
     internal static HttpClient RespondingWith(HttpStatusCode statusCode, string content) =>
         new HttpClient(new StubHttpMessageHandler(statusCode, content, throwOnSend: null));
 
+    internal static HttpClient RespondingWith(HttpStatusCode statusCode) =>
+        new HttpClient(new StubHttpMessageHandler(statusCode, content: null, throwOnSend: null));
+
     internal static HttpClient Throwing(Exception toThrow) =>
-        new HttpClient(new StubHttpMessageHandler(HttpStatusCode.OK, string.Empty, toThrow));
+        new HttpClient(new StubHttpMessageHandler(HttpStatusCode.OK, content: null, toThrow));
 
     internal static StubHttpMessageHandler Recording() =>
-        new StubHttpMessageHandler(HttpStatusCode.OK, string.Empty, throwOnSend: null);
+        new StubHttpMessageHandler(HttpStatusCode.OK, content: null, throwOnSend: null);
 
     internal static StubHttpMessageHandler RecordingAndThrowing(Exception toThrow) =>
-        new StubHttpMessageHandler(HttpStatusCode.OK, string.Empty, toThrow);
+        new StubHttpMessageHandler(HttpStatusCode.OK, content: null, toThrow);
 
     internal HttpClient ToClient() => new HttpClient(this);
 
@@ -48,9 +51,12 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
             return Task.FromException<HttpResponseMessage>(_throwOnSend);
         }
 
-        return Task.FromResult(new HttpResponseMessage(_statusCode)
+        var response = new HttpResponseMessage(_statusCode);
+        if (_content is not null)
         {
-            Content = new StringContent(_content),
-        });
+            response.Content = new StringContent(_content);
+        }
+
+        return Task.FromResult(response);
     }
 }

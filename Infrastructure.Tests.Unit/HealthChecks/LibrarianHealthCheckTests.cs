@@ -41,7 +41,7 @@ public sealed class LibrarianHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new LibrarianHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
+        var check = new LibrarianHealthCheck(StubHttpMessageHandler.RespondingWith(HttpStatusCode.ServiceUnavailable), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Librarian);
 
         // Act

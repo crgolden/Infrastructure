@@ -41,7 +41,7 @@ public sealed class CuratorHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new CuratorHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
+        var check = new CuratorHealthCheck(StubHttpMessageHandler.RespondingWith(HttpStatusCode.ServiceUnavailable), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Curator);
 
         // Act

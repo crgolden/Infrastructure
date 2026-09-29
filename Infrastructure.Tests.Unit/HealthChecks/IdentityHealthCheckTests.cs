@@ -41,7 +41,7 @@ public sealed class IdentityHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new IdentityHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
+        var check = new IdentityHealthCheck(StubHttpMessageHandler.RespondingWith(HttpStatusCode.ServiceUnavailable), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Identity);
 
         // Act

@@ -57,7 +57,7 @@ public sealed class GrafanaHealthCheckTests
     private static IOptions<ServiceEndpointOptions> GetDefaultOptions() => Options.Create(new ServiceEndpointOptions { Grafana = new Uri(Generated.NewServiceAddress()) });
 
     private static HttpClient BuildClient(HttpStatusCode statusCode) =>
-        StubHttpMessageHandler.RespondingWith(statusCode, string.Empty);
+        StubHttpMessageHandler.RespondingWith(statusCode);
 
     private static HttpClient BuildThrowingClient(Exception ex) =>
         StubHttpMessageHandler.Throwing(ex);

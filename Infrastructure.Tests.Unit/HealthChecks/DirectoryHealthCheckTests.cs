@@ -41,7 +41,7 @@ public sealed class DirectoryHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new DirectoryHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
+        var check = new DirectoryHealthCheck(StubHttpMessageHandler.RespondingWith(HttpStatusCode.ServiceUnavailable), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Directory);
 
         // Act

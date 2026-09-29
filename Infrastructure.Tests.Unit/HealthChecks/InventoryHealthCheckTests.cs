@@ -41,7 +41,7 @@ public sealed class InventoryHealthCheckTests
     public async Task CheckHealthAsync_WhenResponseIsNotSuccess_ReturnsUnhealthy()
     {
         // Arrange
-        var check = new InventoryHealthCheck(BuildClient(HttpStatusCode.ServiceUnavailable, string.Empty), GetDefaultConfiguration());
+        var check = new InventoryHealthCheck(StubHttpMessageHandler.RespondingWith(HttpStatusCode.ServiceUnavailable), GetDefaultConfiguration());
         var context = HealthCheckContexts.Create(check, HealthCheckNames.Inventory);
 
         // Act
