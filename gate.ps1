@@ -15,7 +15,7 @@ Register-GateSteps @('Restore local tools', 'Begin Sonar analysis', 'Build with 
 $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'infrastructure-inspect.sarif')
 $unitTrx = Join-Path $repo 'Infrastructure.Tests.Unit\bin\Release\net10.0\TestResults\unit-tests.trx'
-$sonarBranch = "branch-local-$($env:COMPUTERNAME.ToLowerInvariant())"
+$sonarBranch = Get-SonarBranchName
 $beginSonar = "Begin Sonar analysis (branch $sonarBranch)"
 $build = 'Build with dotnet (Release, RestoreLockedMode)'
 $endSonar = 'End Sonar analysis (quality gate waited)'
