@@ -1,4 +1,4 @@
-param([string]$Goal)
+param([string]$Goal, [string[]]$Steps)
 
 $ErrorActionPreference = 'Continue'
 $gateCommon = Join-Path $PSScriptRoot '..\Tools\Gates\GateCommon.ps1'
@@ -12,6 +12,15 @@ New-Item -ItemType Directory -Force -Path $gateOutput | Out-Null
 Register-GateSteps @('Restore local tools', 'Begin Sonar analysis', 'Build with dotnet', 'jb inspectcode',
     'Run unit tests with coverage', 'End Sonar analysis',
     'Fail on open Sonar issues')
+Register-StepInputs @{
+    'Restore local tools'          = @('dotnet-tools.json')
+    'Begin Sonar analysis'         = @('*')
+    'Build with dotnet'            = @('*')
+    'jb inspectcode'               = @('*')
+    'Run unit tests with coverage' = @('*')
+    'End Sonar analysis'           = @('*')
+    'Fail on open Sonar issues'    = @('*')
+}
 $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'infrastructure-inspect.sarif')
 $unitTrx = Join-Path $repo 'Infrastructure.Tests.Unit\bin\Release\net10.0\TestResults\unit-tests.trx'
@@ -25,6 +34,7 @@ $env:TZ = 'UTC'
 if ($env:TZ -ne 'UTC') { Write-Host 'GATE: FAILED (TZ pin)'; exit 1 }
 Set-Location $repo
 Initialize-GateState 'Infrastructure' $repo
+Assert-RequestedSteps $Steps
 Invoke-CatalogSteps
 
 $global:LASTEXITCODE = $null
