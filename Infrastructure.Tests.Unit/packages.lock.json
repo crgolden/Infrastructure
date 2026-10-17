@@ -711,8 +711,8 @@
       },
       "RESPite": {
         "type": "Transitive",
-        "resolved": "3.4.0",
-        "contentHash": "BEdf42Eugi6oNw84vSQuLvYOzoY9KLv6gKsxFbSbv1zm23DiCULeQ8jobRgGip43T0GoAJstFW0TXvKRx9Ewlg=="
+        "resolved": "3.4.5",
+        "contentHash": "EzMx67+IXC8lQRI78yeSBWKCTn9qvSIaale6XZ1RJLKpr2NJqmptgn3UqgguWqoeGUsoohiy3SWeiVLAj1n9DA=="
       },
       "Serilog": {
         "type": "Transitive",
@@ -816,11 +816,11 @@
       },
       "StackExchange.Redis": {
         "type": "Transitive",
-        "resolved": "3.4.0",
-        "contentHash": "29fvhba1pHQ2Vs+FIiG2201G62xL4EayGMm7yNZrHh/IcOZbzhl4g1CKQQP9xhznzDHybFURyj3XN433QctdPA==",
+        "resolved": "3.4.5",
+        "contentHash": "LtbEuNmaW6N75tvLAlXoDGDJHTCwmrHFL8/9OeQknWoCWcZhUcUnPvG2ijSO7tTyC7XID9LskIu42spa0b/nMQ==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "10.0.5",
-          "RESPite": "3.4.0",
+          "RESPite": "3.4.5",
           "System.IO.Hashing": "10.0.12"
         }
       },
@@ -976,7 +976,7 @@
           "Shared": "[1.6.0, )",
           "SharpCompress": "[0.50.5, )",
           "Snappier": "[1.3.1, )",
-          "StackExchange.Redis": "[3.4.0, )",
+          "StackExchange.Redis": "[3.4.5, )",
           "System.Security.Cryptography.Pkcs": "[10.0.13, )"
         }
       }
