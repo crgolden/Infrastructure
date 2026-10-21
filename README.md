@@ -6,20 +6,7 @@
 
 An ASP.NET Core 10 service-health monitoring application that continuously polls critical infrastructure services, displays a real-time dashboard, and emails alerts on status changes.
 
-## Sibling Applications
-
-Infrastructure is the **observability surface** for the `crgolden` service fleet. It polls each sibling's `/health` endpoint and sends an alert email on the `Healthy → Unhealthy` transition (and a recovery email on the way back). Each sibling check resolves its base URL from a configuration key and treats the response as healthy only when the body equals `Healthy`.
-
-| Repo | Role | Base-URL config key |
-|---|---|---|
-| [Identity](https://github.com/crgolden/Identity) | OIDC Identity Provider | `OidcAuthority` |
-| [Inventory](https://github.com/crgolden/Inventory) | Angular SPA + ASP.NET Core BFF | `InventoryServerAddress` |
-| [Manuals](https://github.com/crgolden/Manuals) | Azure OpenAI chat API | `ManualsApiAddress` |
-| [Products](https://github.com/crgolden/Products) | OData v4 product catalog API | `ProductsApiAddress` |
-| [Churches](https://github.com/crgolden/Churches) | Church discovery Angular SSR + Node (Express) BFF | `ChurchesServerAddress` |
-| [Directory](https://github.com/crgolden/Directory) | Church directory API | `DirectoryApiAddress` |
-| [Curator](https://github.com/crgolden/Curator) | PlayStation game-curation API | `CuratorApiAddress` |
-| [Librarian](https://github.com/crgolden/Librarian) | Curator UI Angular SSR + Node (Express) BFF | `LibrarianServerAddress` |
+How the parts fit together and the rules each keeps: [ARCHITECTURE.md](ARCHITECTURE.md). The dashboard's design: [DESIGN.md](DESIGN.md). How to run the tests: [TESTING.md](TESTING.md). Guidance for coding agents working in this repo: [AGENTS.md](AGENTS.md).
 
 ## Services Monitored
 
@@ -41,14 +28,16 @@ Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks 
 | WMSvc | TCP connect | `ServiceEndpointOptions:WmsvcHost` / `:WmsvcPort` |
 | Redis | `PING` via `IConnectionMultiplexer` | `RedisHost` / `RedisPort` / `RedisSsl` |
 | MongoDB | `ping` command via `IMongoClient` | `MongoServerHost` / `MongoServerPort` / `MongoUseTls` |
-| [Identity](https://github.com/crgolden/Identity) | HTTP GET `/health`, body `Healthy` | `OidcAuthority` |
-| [Manuals](https://github.com/crgolden/Manuals) | HTTP GET `/health`, body `Healthy` | `ManualsApiAddress` |
-| [Inventory](https://github.com/crgolden/Inventory) | HTTP GET `/health`, body `Healthy` | `InventoryServerAddress` |
-| [Products](https://github.com/crgolden/Products) | HTTP GET `/health`, body `Healthy` | `ProductsApiAddress` |
-| [Churches](https://github.com/crgolden/Churches) | HTTP GET `/health`, body `Healthy` | `ChurchesServerAddress` |
-| [Directory](https://github.com/crgolden/Directory) | HTTP GET `/health`, body `Healthy` | `DirectoryApiAddress` |
-| [Curator](https://github.com/crgolden/Curator) | HTTP GET `/health`, body `Healthy` | `CuratorApiAddress` |
-| [Librarian](https://github.com/crgolden/Librarian) | HTTP GET `/health`, body `Healthy` | `LibrarianServerAddress` |
+| Identity (the OIDC provider) | HTTP GET `/health`, body `Healthy` | `OidcAuthority` |
+| Manuals | HTTP GET `/health`, body `Healthy` | `ManualsApiAddress` |
+| Inventory | HTTP GET `/health`, body `Healthy` | `InventoryServerAddress` |
+| Products | HTTP GET `/health`, body `Healthy` | `ProductsApiAddress` |
+| Churches | HTTP GET `/health`, body `Healthy` | `ChurchesServerAddress` |
+| Directory | HTTP GET `/health`, body `Healthy` | `DirectoryApiAddress` |
+| Curator | HTTP GET `/health`, body `Healthy` | `CuratorApiAddress` |
+| Librarian | HTTP GET `/health`, body `Healthy` | `LibrarianServerAddress` |
+
+The last eight are web apps; each check extends `SiblingAppHealthCheck`, which reads the app's base URL from the listed key and reports healthy only when the `/health` body is exactly `Healthy`. Point any key at the app you want to watch.
 
 Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30). When a service transitions from `Healthy` (or `Unknown`) to `Unhealthy`, an alert message is published to the Azure Service Bus `email` queue; a recovery message is sent when it returns to `Healthy`. `Degraded` does not trigger an email.
 
@@ -68,9 +57,20 @@ Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30).
 
 | Tool | Notes |
 |---|---|
-| .NET 10 SDK | |
+| .NET 10 SDK | `global.json` pins `10.0.201` and rolls forward to the latest feature band |
+| GitHub personal access token | `read:packages` scope: the `Shared` package restores from the `crgolden` GitHub Packages feed (`NuGet.Config`), which asks for a token even for a public package. Store it as the `GitHub` source's credentials in your user NuGet configuration (`dotnet nuget update source GitHub --username <user> --password <token> --store-password-in-clear-text --configfile "$env:APPDATA\NuGet\NuGet.Config"`), never in this repo |
+| An OIDC provider | The dashboard signs in with OpenID Connect (`OidcAuthority`, `InfrastructureClientId`, `InfrastructureClientSecret`) |
 | Azure Key Vault | Backs the secrets listed below in production, as Key Vault-referenced App Service settings the platform resolves into configuration at startup — non-production reads the same config keys from User Secrets / environment variables |
 | Azure Service Bus namespace | With an `email` queue for outbound alert messages |
+
+## Clone and build
+
+```powershell
+git clone https://github.com/crgolden/Infrastructure.git
+cd Infrastructure
+dotnet tool restore
+dotnet build Infrastructure.slnx
+```
 
 ## Getting Started
 
@@ -138,7 +138,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `MongoDbPassword` | MongoDB password |
 | `PostgreSqlUserId` | PostgreSQL login |
 | `PostgreSqlPassword` | PostgreSQL password |
-| `Email1` | Alert recipient email address (shared with the synthetic walkers' slot-1 account) |
+| `Email1` | Alert recipient email address |
 | `InfrastructureClientId` | OIDC client ID |
 | `InfrastructureClientSecret` | OIDC client secret |
 | `ServiceBusConnectionString` | Service Bus connection string (non-production only) |
@@ -185,6 +185,21 @@ dotnet test --project Infrastructure.Tests.Unit --configuration Release -- --fil
 # Publish web app (-r win-x86 required: Azure App Service Free tier supports 32-bit only)
 dotnet publish Infrastructure -c Release -r win-x86 --self-contained false -o ./publish
 ```
+
+The unit tier needs no network, service or secret; [TESTING.md](TESTING.md) covers it in full.
+
+## Gate
+
+`gate.ps1` is the maintainers' gate. It loads a private toolkit from a folder beside this repo, so in a plain clone it stops at once with `GATE: FAILED`. To gate your own change, run the checks CI runs, in this order:
+
+```powershell
+dotnet tool restore
+dotnet build --no-incremental --configuration Release /p:RestoreLockedMode=true -warnaserror
+dotnet jb inspectcode Infrastructure.slnx --no-build -e=WARNING --output=inspectcode.sarif
+dotnet test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait "Category=Unit"
+```
+
+`jb inspectcode` passes only when `inspectcode.sarif` holds no results.
 
 ## Deployment
 

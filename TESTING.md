@@ -45,10 +45,7 @@ These apply to every `[Fact]` and `[Theory]` in `Infrastructure.Tests.Unit`.
 
 ## Running Tests Locally
 
-For running tests (`dotnet test` from the repo root — never the workspace root) and the exe-runner flags,
-see the workspace-level [TESTING.md](../AGENTS/TESTING.md).
-
-No Azure credentials required — all tests are unit tests.
+Run from the repo root. No Azure credentials are required: all tests are unit tests.
 
 ```powershell
 dotnet test --project Infrastructure.Tests.Unit --configuration Debug -- --filter-trait "Category=Unit"
@@ -64,31 +61,31 @@ dotnet build Infrastructure.Tests.Unit --configuration Debug
 
 ### `HealthChecks/`
 
-One test class per health check. Each check accepts its external dependency via constructor injection so the class under test is instantiated directly with a Moq mock — no application startup, no Azure, no real services.
+One test class per health check. Each check accepts its external dependency via constructor injection, so the class under test is created directly with a test double: an HTTP check gets an `HttpClient` whose handler is `StubHttpMessageHandler.RespondingWith(...)` or `.Throwing(...)`, and every other check a strict Moq mock. No application startup, no Azure, no real services.
 
 | Class | Dependency mocked | What it tests |
 |-------|-------------------|---------------|
-| `ElasticsearchHealthCheckTests` | `IHttpClientFactory` | `GET /_cluster/health` — healthy / unhealthy response |
-| `InventoryHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
-| `IdentityHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
-| `IISHttpsHealthCheckTests` | `IHttpClientFactory` | HTTPS reachability of `ServiceEndpointOptions:IisHttps` |
-| `KibanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/status` |
-| `ManualsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
+| `ElasticsearchHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /_cluster/health`: healthy and unhealthy responses |
+| `InventoryHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `IdentityHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `IISHttpsHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | HTTPS reachability of `ServiceEndpointOptions:IisHttps` |
+| `KibanaHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /api/status` |
+| `ManualsHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
 | `MongoDbHealthCheckTests` | `IMongoClient` | `ping` command |
-| `PlexHealthCheckTests` | `IHttpClientFactory` | `GET /identity` |
-| `ProductsHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
-| `ChurchesHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
-| `DirectoryHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
-| `CuratorHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
-| `LibrarianHealthCheckTests` | `IHttpClientFactory` | `GET /health` response body == `"Healthy"` |
+| `PlexHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /identity` |
+| `ProductsHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `ChurchesHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `DirectoryHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `CuratorHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `LibrarianHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
 | `RedisHealthCheckTests` | `IConnectionMultiplexer` | `PING` command |
 | `SqlServerHealthCheckTests` | `Func<IDbConnection>` | `SELECT 1` |
 | `PostgreSqlHealthCheckTests` | `Func<IDbConnection>` | `SELECT 1`; also asserts both the command and the connection are disposed on the failure paths |
 | `YawcamHealthCheckTests` | `Func<TcpClient>` | TCP connect to `YawcamHost:YawcamPort` |
 | `WMSvcHealthCheckTests` | `Func<TcpClient>` | TCP connect to `WmsvcHost:WmsvcPort` |
-| `HomeAssistantHealthCheckTests` | `IHttpClientFactory` | `GET /` → HTTP 200 |
-| `UptimeKumaHealthCheckTests` | `IHttpClientFactory` | `GET /` → HTTP 200 |
-| `GrafanaHealthCheckTests` | `IHttpClientFactory` | `GET /api/health` → HTTP 200 |
+| `HomeAssistantHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /` → HTTP 200 |
+| `UptimeKumaHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /` → HTTP 200 |
+| `GrafanaHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /api/health` → HTTP 200 |
 | `AlloyHealthCheckTests` | `Func<TcpClient>` | TCP connect to `AlloyHost:AlloyPort` |
 
 ### `Extensions/`
@@ -138,7 +135,8 @@ The GitHub Actions workflow (`.github/workflows/main_crgolden-infrastructure.yml
 
 ## Local SonarCloud analysis
 
-Generate coverage first, then run from `Infrastructure/`. Unit coverage is OpenCover (branch-bearing,
+The analysis needs the repo's SonarCloud token and project, which only maintainers have. Generate coverage first,
+then run from the repo root. Unit coverage is OpenCover (branch-bearing,
 via `coverlet.console` pinned in `dotnet-tools.json` — restore with `dotnet tool restore`). OpenCover is
 used rather than Cobertura because it carries branch data, which the quality gate scores against.
 Infrastructure is unit-only in CI, so it is the only report produced.
@@ -165,9 +163,3 @@ $env:SONAR_TOKEN = "<token>"
 ```
 
 Required coverage files: `coverage.opencover.xml` (unit, OpenCover).
-
-### When to build a truth table
-
-The coverage **score is read from SonarCloud, never hand-maintained** here. Build a per-method table in the workspace `COVERAGE/Infrastructure.md` only when SonarCloud flags a method with **cognitive complexity > 15 AND uncovered conditions > 0**: the table is escalation for the gnarly few, not a per-class deliverable. See the workspace `COVERAGE/METHOD.md`.
-
-A truth table writes out a method's decision units in full — one row per unit, each row an independent condition whose outcome the tests must pin down. It is the MC/DC question ("how many tests does this method actually need?") made explicit and cacheable, so the answer survives past the session that worked it out.

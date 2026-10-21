@@ -51,13 +51,11 @@ performs the actual email delivery. This repo never sends mail itself.
 - **Only transitions alert, never steady state.** `Unknown`/`Healthy` → `Unhealthy` sends an alert;
   `Unhealthy` → `Healthy` sends a recovery. `Degraded` sends nothing. Alerting on current status rather
   than on the edge would mail on every poll for the duration of an outage.
-- **`RelationalHealthCheck` retries once (250ms delay) before reporting `Unhealthy`.** Diagnosed 2026-08-07: the self-hosted PostgreSQL server and its firewall rule were both
-  confirmed healthy and current, but the server's own log showed zero trace of the failing connection
-  attempts on the days they occurred — the TCP connect (governed by the 30s `Timeout` in
-  `NpgsqlConnectionStringBuilder`/`SqlConnectionStringBuilder`) was being dropped in transit between
-  Azure and the host, not rejected by the database. A single-attempt check turns a rare, self-clearing
-  network blip into a full alert cycle; the retry absorbs that without masking a real outage, since a
-  sustained problem still fails both attempts.
+- **`RelationalHealthCheck` retries once (250ms delay) before reporting `Unhealthy`.** A TCP connect
+  (governed by the 30s `Timeout` in `NpgsqlConnectionStringBuilder`/`SqlConnectionStringBuilder`) can be
+  dropped in transit between the host running this app and the database host, with no trace in the database's
+  own log. A single-attempt check turns such a rare, self-clearing network blip into a full alert cycle; the
+  retry absorbs it without masking a real outage, since a sustained problem still fails both attempts.
 
 - **The relational checks validate the server's TLS certificate.** `NpgsqlConnectionStringBuilder:SslMode`
   is `VerifyFull`, and `SqlConnectionStringBuilder` pairs `Encrypt: true` with
@@ -84,14 +82,10 @@ performs the actual email delivery. This repo never sends mail itself.
   its own exceptions — 14 in the check itself, the 8 sibling checks through `SiblingAppHealthCheck`'s
   catch-all — so the framework's `HealthCheckError` path is unreachable, and a fault in
   the poll loop itself surfaces through `HealthMonitorService`'s own `ILogger` instead. Restoring either
-  behaviour re-creates the incident below.
-- **The reason both of the above exist.** Curator was taken down deliberately for E2E work on 2026-08-12.
-  Infrastructure emailed the alert and the recovery exactly as designed — and then, for the 13½ hours in
-  between, emitted an Error-level entry on every poll, which held the Elasticsearch Error/Fatal
-  log-volume alert in Grafana firing for the whole window. A planned single-service outage therefore read
-  as a sustained failure *of the monitoring app*, which is the one thing this app must never
-  misreport. None of those entries carried signal the dashboard, the SignalR feed, and the transition
-  emails don't already carry.
+  behavior makes a planned single-service outage emit an Error-level entry on every poll for its whole
+  duration, which any log-volume alert reads as a sustained failure *of the monitoring app*, the one thing
+  this app must never misreport. Those entries carry no signal the dashboard, the SignalR feed and the
+  transition emails don't already carry.
 
 ## Adding a monitored service
 
