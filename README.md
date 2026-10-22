@@ -41,7 +41,7 @@ The last eight are web apps; each check extends `SiblingAppHealthCheck`, which r
 
 Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30). When a service transitions from `Healthy` (or `Unknown`) to `Unhealthy`, an alert message is published to the Azure Service Bus `email` queue; a recovery message is sent when it returns to `Healthy`. `Degraded` does not trigger an email.
 
-## Tech Stack
+## Technologies
 
 | Layer | Technology |
 |---|---|
@@ -72,9 +72,7 @@ dotnet tool restore
 dotnet build Infrastructure.slnx
 ```
 
-## Getting Started
-
-### 1. Configure User Secrets
+## Configuration
 
 All `null` values in `appsettings.json` must be supplied via **User Secrets** (development), environment variables (CI), or Key Vault-referenced App Service settings (production) — the app reads every one of them the same way, via `IConfiguration.GetRequired<T>()`, regardless of environment. In non-production, `DefaultAzureCredential` is never constructed — all config comes from User Secrets or env vars.
 
@@ -143,7 +141,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `InfrastructureClientSecret` | OIDC client secret |
 | `ServiceBusConnectionString` | Service Bus connection string (non-production only) |
 
-### 2. Run
+## Run locally
 
 ```bash
 cd Infrastructure
@@ -173,24 +171,17 @@ Key components inside `Infrastructure/`:
 - `Services/KeepaliveService` — `BackgroundService` that self-pings `/ping` every 10 minutes when `WEBSITE_HOSTNAME` is set.
 - `Controllers/StatusController` + `Hubs/HealthHub` — the `[Authorize]` status API and SignalR hub.
 
-## Commands
+## Tests
 
 ```bash
-# Build
-dotnet build
-
-# Unit tests only
 dotnet test --project Infrastructure.Tests.Unit --configuration Release -- --filter-trait "Category=Unit"
-
-# Publish web app (-r win-x86 required: Azure App Service Free tier supports 32-bit only)
-dotnet publish Infrastructure -c Release -r win-x86 --self-contained false -o ./publish
 ```
 
 The unit tier needs no network, service or secret; [TESTING.md](TESTING.md) covers it in full.
 
 ## Gate
 
-`gate.ps1` is the maintainers' gate. It loads a private toolkit from a folder beside this repo, so in a plain clone it stops at once with `GATE: FAILED`. To gate your own change, run the checks CI runs, in this order:
+`gate.ps1` is the maintainers' gate. It dot-sources the gate library script that the `GATE_LIBRARY` environment variable names, which defines the step functions `gate.ps1` calls; unset, as in a plain clone, it stops at once with `GATE: FAILED` and records nothing. To gate with a library of your own, set `GATE_LIBRARY` to its path; it must define every function `gate.ps1` calls, since those functions decide whether each step ran and passed. To gate your own change without one, run the checks CI runs, in this order:
 
 ```powershell
 dotnet tool restore
@@ -203,14 +194,20 @@ dotnet test --project Infrastructure.Tests.Unit --no-build --configuration Relea
 
 ## Deployment
 
-The GitHub Actions workflow triggers on pushes to `main` and pull requests.
+The GitHub Actions workflow triggers on pushes to `main`, pull requests and manual dispatch.
 
-**Build job** — runs on every trigger:
+**Build job**, which runs on every trigger:
 1. Builds the solution (`dotnet build --configuration Release`)
 2. Runs unit tests with coverage
 3. Runs SonarCloud analysis, publishes the web app, and uploads the artifact
 
-**Deploy job** — runs after a successful build on `main`:
+**Deploy job**, which runs after a successful build on every event except a pull request:
 1. Deploys the web app to **Azure App Service** `crgolden-infrastructure` (Production slot) via Azure OIDC
+
+To publish the web app yourself (`-r win-x86` is required: the Azure App Service Free tier runs 32-bit only):
+
+```bash
+dotnet publish Infrastructure -c Release -r win-x86 --self-contained false -o ./publish
+```
 
 > **Firewall note:** Every monitored service listens on a host and port supplied through the configuration keys above, and each of those must allow inbound traffic from the deployed app's outbound IP addresses. Any firewall rule scoped to specific IPs or to the local subnet needs updating when those outbound addresses change — a monitored service that is up but unreachable reports `Unhealthy` and triggers an alert exactly as a real outage would.

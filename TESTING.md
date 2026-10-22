@@ -23,7 +23,7 @@ These apply to every `[Fact]` and `[Theory]` in `Infrastructure.Tests.Unit`.
   an assertion path.
 - **No `ILogger` in tests** and no ad-hoc logging. `ITestOutputHelper` is optional and diagnostic only.
 
-## Test tier
+## Test tiers
 
 | Tier | Trait | Project | Requires Azure? | Runs in CI |
 |------|-------|---------|-----------------|------------|
@@ -135,15 +135,27 @@ The GitHub Actions workflow (`.github/workflows/main_crgolden-infrastructure.yml
 
 ## Local SonarCloud analysis
 
-The analysis needs the repo's SonarCloud token and project, which only maintainers have. Generate coverage first,
-then run from the repo root. Unit coverage is OpenCover (branch-bearing,
-via `coverlet.console` pinned in `dotnet-tools.json` — restore with `dotnet tool restore`). OpenCover is
-used rather than Cobertura because it carries branch data, which the quality gate scores against.
+The analysis needs the repo's SonarCloud token and project, which only maintainers have. C# is analyzed only
+through the MSBuild scanner, `dotnet-sonarscanner` (`dotnet tool install --global dotnet-sonarscanner`): the
+standalone `sonar-scanner` CLI indexes C# files but publishes no issues, replacing the project's analysis with an
+empty one. Run from the repo root, in this order: `begin`, the build, coverage, `end`. The `begin` arguments are
+the ones `.github/workflows/main_crgolden-infrastructure.yml` passes, and must stay identical to them. `end` needs
+a Java 17 or later runtime in `JAVA_HOME`, process scope only; the `jre` folder of a SonarScanner CLI install is
+one. Unit coverage is OpenCover (branch-bearing, via `coverlet.console` pinned in `dotnet-tools.json`). OpenCover
+is used rather than Cobertura because it carries branch data, which the quality gate scores against.
 Infrastructure is unit-only in CI, so it is the only report produced.
 
 ```powershell
-dotnet build Infrastructure.Tests.Unit --configuration Release
+$env:SONAR_TOKEN = "<token>"
+$env:JAVA_HOME = "<a Java 17+ runtime>"
 dotnet tool restore
+dotnet-sonarscanner begin /k:"crgolden_Infrastructure" /o:"crgolden" /d:sonar.token="$env:SONAR_TOKEN" `
+  /d:sonar.host.url="https://sonarcloud.io" `
+  /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" `
+  /d:sonar.exclusions="**/bin/**,**/obj/**" `
+  /d:sonar.coverage.exclusions="**/Program.cs,**/gate.ps1" `
+  /d:sonar.qualitygate.wait=true /d:sonar.scanner.skipJreProvisioning=true
+dotnet build --no-incremental --configuration Release
 dotnet coverlet Infrastructure.Tests.Unit\bin\Release\net10.0 `
   --target "dotnet" `
   --targetargs "test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit" `
@@ -152,14 +164,7 @@ dotnet coverlet Infrastructure.Tests.Unit\bin\Release\net10.0 `
   --exclude-by-file "**/obj/**" --exclude-by-file "**/Program.cs" `
   --does-not-return-attribute DoesNotReturnAttribute --include "[Infrastructure]*"
 
-$env:SONAR_TOKEN = "<token>"
-& "$env:SystemDrive\sonar-scanner-8.0.1.6346-windows-x64\bin\sonar-scanner.bat" `
-  "-Dsonar.projectKey=crgolden_Infrastructure" `
-  "-Dsonar.organization=crgolden" `
-  "-Dsonar.sources=Infrastructure" `
-  "-Dsonar.tests=Infrastructure.Tests.Unit" `
-  "-Dsonar.exclusions=**/bin/**,**/obj/**" `
-  "-Dsonar.cs.opencover.reportsPaths=coverage.opencover.xml"
+dotnet-sonarscanner end /d:sonar.token="$env:SONAR_TOKEN"
 ```
 
 Required coverage files: `coverage.opencover.xml` (unit, OpenCover).
