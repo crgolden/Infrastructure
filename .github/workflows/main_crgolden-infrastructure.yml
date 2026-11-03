@@ -123,16 +123,19 @@ jobs:
           SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
           SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
         run: |
-          ${{ runner.temp }}/scanner/dotnet-sonarscanner begin `
-            /k:"$env:SONAR_PROJECT_KEY" `
-            /o:"$env:SONAR_ORGANIZATION" `
-            /d:sonar.token="$env:SONAR_TOKEN" `
-            /d:sonar.host.url="https://sonarcloud.io" `
-            /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" `
-            /d:sonar.exclusions="**/bin/**,**/obj/**" `
-            /d:sonar.coverage.exclusions="**/Program.cs,**/gate.ps1" `
-            /d:sonar.qualitygate.wait=true `
-            /d:sonar.scanner.skipJreProvisioning=true
+          $arguments = @(
+            'begin'
+            "/k:$env:SONAR_PROJECT_KEY"
+            "/o:$env:SONAR_ORGANIZATION"
+            "/d:sonar.token=$env:SONAR_TOKEN"
+            '/d:sonar.host.url=https://sonarcloud.io'
+            '/d:sonar.cs.opencover.reportsPaths=coverage.opencover.xml'
+            '/d:sonar.exclusions=**/bin/**,**/obj/**'
+            '/d:sonar.coverage.exclusions=**/Program.cs,**/gate.ps1'
+            '/d:sonar.qualitygate.wait=true'
+            '/d:sonar.scanner.skipJreProvisioning=true'
+          )
+          & "${{ runner.temp }}/scanner/dotnet-sonarscanner" @arguments
 
       - name: Build with dotnet
         env:
@@ -151,16 +154,19 @@ jobs:
 
       - name: Run unit tests with coverage
         run: |
-          dotnet coverlet Infrastructure.Tests.Unit/bin/Release/net10.0 `
-            --target "dotnet" `
-            --targetargs "test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net10.0/TestResults" `
-            --format opencover --output "coverage.opencover.xml" `
-            --skipautoprops `
-            --exclude-by-attribute GeneratedCodeAttribute `
-            --exclude-by-file "**/obj/**" `
-            --exclude-by-file "**/Program.cs" `
-            --does-not-return-attribute DoesNotReturnAttribute `
-            --include "[Infrastructure]*"
+          $arguments = @(
+            'Infrastructure.Tests.Unit/bin/Release/net10.0'
+            '--target', 'dotnet'
+            '--targetargs', 'test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net10.0/TestResults'
+            '--format', 'opencover', '--output', 'coverage.opencover.xml'
+            '--skipautoprops'
+            '--exclude-by-attribute', 'GeneratedCodeAttribute'
+            '--exclude-by-file', '**/obj/**'
+            '--exclude-by-file', '**/Program.cs'
+            '--does-not-return-attribute', 'DoesNotReturnAttribute'
+            '--include', '[Infrastructure]*'
+          )
+          dotnet coverlet @arguments
 
       - name: Upload test results
         uses: actions/upload-artifact@v7

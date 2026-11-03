@@ -1,4 +1,4 @@
-param([string]$Goal, [string]$Probe)
+param([string]$Goal, [string]$Probe, [string]$Only)
 
 $ErrorActionPreference = 'Continue'
 $gateCommon = $env:GATE_LIBRARY
@@ -36,9 +36,35 @@ $unit = 'Run unit tests with coverage (Category=Unit)'
 $env:TZ = 'UTC'
 if ($env:TZ -ne 'UTC') { Write-Host 'GATE: FAILED (TZ pin)'; exit 1 }
 Set-Location $repo
-Initialize-GateState 'Infrastructure' $repo -Probe $Probe
+$probeProjects = [ordered]@{ 'Run unit tests with coverage' = 'Infrastructure.Tests.Unit' }
+if ($Only -and -not $Probe) { Write-Host 'PROBE: FAILED (-Only names the one test a probe runs, so it needs -Probe)'; exit 1 }
+if ($Probe -and (-not $probeProjects.Contains($Probe.Trim()) -or [string]::IsNullOrWhiteSpace($Only) -or $Only.Contains(','))) {
+    Write-Host "PROBE: FAILED (a probe runs exactly one test: -Probe '<$($probeProjects.Keys -join ' | ')>' -Only '<fully qualified test method>')"
+    exit 1
+}
+$gateState = @{ Probe = $Probe }
+if ((Get-Command Initialize-GateState).Parameters.ContainsKey('Only')) { $gateState['Only'] = $Only }
+Initialize-GateState 'Infrastructure' $repo @gateState
 Resolve-OwedSteps
 Invoke-CatalogSteps
+
+if ($Probe) {
+    $probeStep = $Probe.Trim()
+    $probeResults = Join-Path $gateOutput 'probe-results'
+    $probeTrx = Join-Path $probeResults 'probe.trx'
+    if (Test-Path -LiteralPath $probeTrx) { Remove-Item -LiteralPath $probeTrx -Force }
+    $global:LASTEXITCODE = $null
+    dotnet test --project $probeProjects[$probeStep] --no-build --configuration Release -- --filter-method $Only --report-xunit-trx --report-xunit-trx-filename probe.trx --results-directory=$probeResults
+    $probeExit = $global:LASTEXITCODE
+    if (-not (Test-Path -LiteralPath $probeTrx)) { Stop-Gate $probeStep "no TRX (exit $probeExit)" }
+    [xml]$probeDoc = Get-Content -LiteralPath $probeTrx -Raw
+    $counters = $probeDoc.TestRun.ResultSummary.Counters
+    if ($probeExit -ne 0 -or [int]$counters.executed -ne 1 -or [int]$counters.failed -ne 0) {
+        Stop-Gate $probeStep "a probe runs one test, and '$Only' executed $($counters.executed), failed $($counters.failed) (exit $probeExit)"
+    }
+    Write-Row $probeStep 'PASS' "one test, '$Only', passed (the last build's binaries; a probe builds nothing)"
+    Complete-Gate
+}
 
 $global:LASTEXITCODE = $null
 dotnet tool restore
