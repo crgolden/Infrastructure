@@ -48,9 +48,12 @@ performs the actual email delivery. This repo never sends mail itself.
   monitored service emits a span each cycle), and `KeepaliveService` around its self-ping. Removing either
   floods the trace backend with noise that carries no signal; transitions are surfaced through
   `AlertService` and SignalR instead.
-- **Only transitions alert, never steady state.** `Unknown`/`Healthy` → `Unhealthy` sends an alert;
-  `Unhealthy` → `Healthy` sends a recovery. `Degraded` sends nothing. Alerting on current status rather
-  than on the edge would mail on every poll for the duration of an outage.
+- **Only transitions alert, never steady state, and only a sustained one.** A service alerts on the poll
+  where it reaches `MonitoringOptions:UnhealthyPollsBeforeAlert` consecutive `Unhealthy` results, once;
+  the next `Healthy` result after that alert sends the recovery. A shorter run of failures sends nothing,
+  so a single slow or dropped probe of a sibling app (which `SiblingAppHealthCheck` reports as `Unhealthy`)
+  mails nobody. `Degraded` sends nothing and resets the run. Alerting on current status rather than on
+  the edge would mail on every poll for the duration of an outage.
 - **`RelationalHealthCheck` retries once (250ms delay) before reporting `Unhealthy`.** A TCP connect
   (governed by the 30s `Timeout` in `NpgsqlConnectionStringBuilder`/`SqlConnectionStringBuilder`) can be
   dropped in transit between the host running this app and the database host, with no trace in the database's

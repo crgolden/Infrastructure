@@ -42,29 +42,28 @@ if ($Probe -and (-not $probeProjects.Contains($Probe.Trim()) -or [string]::IsNul
     Write-Host "PROBE: FAILED (a probe runs exactly one test: -Probe '<$($probeProjects.Keys -join ' | ')>' -Only '<fully qualified test method>')"
     exit 1
 }
-$gateState = @{ Probe = $Probe }
-if ((Get-Command Initialize-GateState).Parameters.ContainsKey('Only')) { $gateState['Only'] = $Only }
-Initialize-GateState 'Infrastructure' $repo @gateState
-Resolve-OwedSteps
-Invoke-CatalogSteps
-
 if ($Probe) {
     $probeStep = $Probe.Trim()
     $probeResults = Join-Path $gateOutput 'probe-results'
     $probeTrx = Join-Path $probeResults 'probe.trx'
     if (Test-Path -LiteralPath $probeTrx) { Remove-Item -LiteralPath $probeTrx -Force }
+    Write-Host "PROBE: running one test, '$Only' of $probeStep; no gate record or verdict is written"
     $global:LASTEXITCODE = $null
     dotnet test --project $probeProjects[$probeStep] --no-build --configuration Release -- --filter-method $Only --report-xunit-trx --report-xunit-trx-filename probe.trx --results-directory=$probeResults
     $probeExit = $global:LASTEXITCODE
-    if (-not (Test-Path -LiteralPath $probeTrx)) { Stop-Gate $probeStep "no TRX (exit $probeExit)" }
+    if (-not (Test-Path -LiteralPath $probeTrx)) { Write-Host "PROBE: FAILED (no TRX, exit $probeExit)"; exit 1 }
     [xml]$probeDoc = Get-Content -LiteralPath $probeTrx -Raw
     $counters = $probeDoc.TestRun.ResultSummary.Counters
     if ($probeExit -ne 0 -or [int]$counters.executed -ne 1 -or [int]$counters.failed -ne 0) {
-        Stop-Gate $probeStep "a probe runs one test, and '$Only' executed $($counters.executed), failed $($counters.failed) (exit $probeExit)"
+        Write-Host "PROBE: FAILED (a probe runs one test, and '$Only' executed $($counters.executed), failed $($counters.failed), exit $probeExit)"
+        exit 1
     }
-    Write-Row $probeStep 'PASS' "one test, '$Only', passed (the last build's binaries; a probe builds nothing)"
-    Complete-Gate
+    Write-Host "PROBE: PASSED for the one test named, against the last build's binaries; no verdict was saved"
+    exit 0
 }
+Initialize-GateState 'Infrastructure' $repo
+Resolve-OwedSteps
+Invoke-CatalogSteps
 
 $global:LASTEXITCODE = $null
 dotnet tool restore
