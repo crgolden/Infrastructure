@@ -11,15 +11,13 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 {
     internal const string SnapshotClientMethod = "ReceiveSnapshot";
 
-    private readonly Dictionary<string, int> _unhealthyPolls = [];
-    private readonly HashSet<string> _alerted = [];
+    private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
     private readonly Lock _lock = new();
     private readonly HealthCheckService _healthCheckService;
     private readonly IHubContext<HealthHub> _hubContext;
     private readonly IAlertService _alertService;
     private readonly Telemetry _telemetry;
     private readonly int _intervalSeconds;
-    private readonly int _unhealthyPollsBeforeAlert;
 
     private HealthSnapshot? _lastSnapshot;
 
@@ -40,12 +38,6 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
 
         _intervalSeconds = options.Value.IntervalSeconds.Value;
-        if (options.Value.UnhealthyPollsBeforeAlert is not { } unhealthyPollsBeforeAlert || unhealthyPollsBeforeAlert < 1)
-        {
-            throw new InvalidOperationException($"Invalid '{nameof(MonitoringOptions.UnhealthyPollsBeforeAlert)}'.");
-        }
-
-        _unhealthyPollsBeforeAlert = unhealthyPollsBeforeAlert;
     }
 
     public HealthSnapshot? LastSnapshot
@@ -125,21 +117,19 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 
         foreach (var result in results)
         {
-            var unhealthyPolls = result.Status is ServiceStatus.Unhealthy
-                ? _unhealthyPolls.GetValueOrDefault(result.Name) + 1
-                : 0;
-            _unhealthyPolls[result.Name] = unhealthyPolls;
+            _previousStatuses.TryGetValue(result.Name, out var previous);
+            var current = result.Status;
 
             try
             {
-                if (unhealthyPolls == _unhealthyPollsBeforeAlert)
+                switch (previous)
                 {
-                    _alerted.Add(result.Name);
-                    await _alertService.SendAlertAsync(result, cancellationToken);
-                }
-                else if (result.Status is ServiceStatus.Healthy && _alerted.Remove(result.Name))
-                {
-                    await _alertService.SendRecoveryAsync(result, cancellationToken);
+                    case ServiceStatus.Unknown or ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
+                        await _alertService.SendAlertAsync(result, cancellationToken);
+                        break;
+                    case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
+                        await _alertService.SendRecoveryAsync(result, cancellationToken);
+                        break;
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -150,6 +140,8 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
             {
                 _telemetry.HealthMonitorFailed(Telemetry.Metrics.AlertSendStage, ex);
             }
+
+            _previousStatuses[result.Name] = current;
         }
     }
 }
