@@ -1,4 +1,4 @@
-param([string]$Goal, [string]$Probe, [string]$Only)
+param([string]$Goal, [string]$Only)
 
 $ErrorActionPreference = 'Continue'
 $gateCommon = $env:GATE_LIBRARY
@@ -36,20 +36,24 @@ $unit = 'Run unit tests with coverage (Category=Unit)'
 $env:TZ = 'UTC'
 if ($env:TZ -ne 'UTC') { Write-Host 'GATE: FAILED (TZ pin)'; exit 1 }
 Set-Location $repo
-$probeProjects = [ordered]@{ 'Run unit tests with coverage' = 'Infrastructure.Tests.Unit' }
-if ($Only -and -not $Probe) { Write-Host 'PROBE: FAILED (-Only names the one test a probe runs, so it needs -Probe)'; exit 1 }
-if ($Probe -and (-not $probeProjects.Contains($Probe.Trim()) -or [string]::IsNullOrWhiteSpace($Only) -or $Only.Contains(','))) {
-    Write-Host "PROBE: FAILED (a probe runs exactly one test: -Probe '<$($probeProjects.Keys -join ' | ')>' -Only '<fully qualified test method>')"
-    exit 1
-}
-if ($Probe) {
-    $probeStep = $Probe.Trim()
+$probeProjects = @('Infrastructure.Tests.Unit')
+if ($Only) {
+    $probeFile, $probeTest = $Only -split '::', 2
+    $probeFile = "$probeFile".Trim().Replace('\', '/')
+    $probeTest = "$probeTest".Trim()
+    $probeProject = $probeFile.Split('/')[0]
+    if (-not $probeTest -or $probeTest.Contains(',') -or $probeProject -notin $probeProjects -or
+            -not (Test-Path -LiteralPath (Join-Path $repo $probeFile) -PathType Leaf)) {
+        Write-Host "PROBE: FAILED (a probe runs exactly one test, named by the file it lives in: -Only '<a test file under $($probeProjects -join ' | ')>::<test method>')"
+        exit 1
+    }
+    $probeClass = [IO.Path]::GetFileNameWithoutExtension($probeFile)
     $probeResults = Join-Path $gateOutput 'probe-results'
     $probeTrx = Join-Path $probeResults 'probe.trx'
     if (Test-Path -LiteralPath $probeTrx) { Remove-Item -LiteralPath $probeTrx -Force }
-    Write-Host "PROBE: running one test, '$Only' of $probeStep; no gate record or verdict is written"
+    Write-Host "PROBE: running one test, '$probeTest' of $probeClass in $probeProject; no gate record or verdict is written"
     $global:LASTEXITCODE = $null
-    dotnet test --project $probeProjects[$probeStep] --no-build --configuration Release -- --filter-method $Only --report-xunit-trx --report-xunit-trx-filename probe.trx --results-directory=$probeResults
+    dotnet test --project $probeProject --no-build --configuration Release -- --filter-query "/*/*/$probeClass/$probeTest" --report-xunit-trx --report-xunit-trx-filename probe.trx --results-directory=$probeResults
     $probeExit = $global:LASTEXITCODE
     if (-not (Test-Path -LiteralPath $probeTrx)) { Write-Host "PROBE: FAILED (no TRX, exit $probeExit)"; exit 1 }
     [xml]$probeDoc = Get-Content -LiteralPath $probeTrx -Raw
