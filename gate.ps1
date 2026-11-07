@@ -65,10 +65,6 @@ if ($Only) {
     Write-Host "PROBE: PASSED for the one test named, against the last build's binaries; no verdict was saved"
     exit 0
 }
-if (-not (Get-Command Exit-GateRun -ErrorAction SilentlyContinue)) {
-    Write-Host 'GATE: FAILED (the gate library defines no Exit-GateRun, so it predates the Invoke-Gate this gate runs its body in; pull Tools first)'
-    exit 1
-}
 exit (Invoke-Gate {
 Initialize-GateState 'Infrastructure' $repo
 Resolve-OwedSteps
