@@ -45,4 +45,6 @@ internal static class HealthCheckNames
     internal const string Curator = "Curator";
 
     internal const string Librarian = "Librarian";
+
+    internal const string Sentinel = "Sentinel";
 }

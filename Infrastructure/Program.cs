@@ -184,6 +184,7 @@ try
         .AddHttpClient<DirectoryHealthCheck>().Services
         .AddHttpClient<CuratorHealthCheck>().Services
         .AddHttpClient<LibrarianHealthCheck>().Services
+        .AddHttpClient<SentinelHealthCheck>().Services
         .AddKeyedTransient<Func<IDbConnection>>("SqlServer", (_, _) => () => new SqlConnection(sqlConnectionStringBuilder.ConnectionString))
         .AddKeyedTransient<Func<IDbConnection>>("PostgreSql", (_, _) => () => new NpgsqlConnection(postgreSqlConnectionStringBuilder.ConnectionString))
         .AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(configurationOptions))
@@ -211,7 +212,8 @@ try
         .AddCheck<ChurchesHealthCheck>(HealthCheckNames.Churches, tags: [HealthCheckTags.Service])
         .AddCheck<DirectoryHealthCheck>(HealthCheckNames.Directory, tags: [HealthCheckTags.Service])
         .AddCheck<CuratorHealthCheck>(HealthCheckNames.Curator, tags: [HealthCheckTags.Service])
-        .AddCheck<LibrarianHealthCheck>(HealthCheckNames.Librarian, tags: [HealthCheckTags.Service]).Services
+        .AddCheck<LibrarianHealthCheck>(HealthCheckNames.Librarian, tags: [HealthCheckTags.Service])
+        .AddCheck<SentinelHealthCheck>(HealthCheckNames.Sentinel, tags: [HealthCheckTags.Service]).Services
         .AddSignalR()
         .AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter())).Services
         .AddSingleton<IAlertService, AlertService>()

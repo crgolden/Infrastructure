@@ -36,6 +36,7 @@ Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks 
 | Directory | HTTP GET `/health`, body `Healthy` | `DirectoryApiAddress` |
 | Curator | HTTP GET `/health`, body `Healthy` | `CuratorApiAddress` |
 | Librarian | HTTP GET `/health`, body `Healthy` | `LibrarianServerAddress` |
+| Sentinel | HTTP GET `/health`, body `Healthy` | `SentinelServerAddress` |
 
 The last eight are web apps; each check extends `SiblingAppHealthCheck`, which reads the app's base URL from the listed key and reports healthy only when the `/health` body is exactly `Healthy`. Point any key at the app you want to watch.
 
@@ -107,6 +108,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `DirectoryApiAddress` | Directory base URL (`/health` target) |
 | `CuratorApiAddress` | Curator base URL (`/health` target) |
 | `LibrarianServerAddress` | Librarian base URL (`/health` target) |
+| `SentinelServerAddress` | Sentinel base URL (`/health` target) |
 
 > The alert recipient (`AlertOptions.RecipientEmail`) is **not** a config key — it is bound from the `Email1` secret at startup.
 

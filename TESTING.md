@@ -78,6 +78,7 @@ One test class per health check. Each check accepts its external dependency via 
 | `DirectoryHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
 | `CuratorHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
 | `LibrarianHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
+| `SentinelHealthCheckTests` | `HttpClient` over `StubHttpMessageHandler` | `GET /health` response body == `"Healthy"` |
 | `RedisHealthCheckTests` | `IConnectionMultiplexer` | `PING` command |
 | `SqlServerHealthCheckTests` | `Func<IDbConnection>` | `SELECT 1` |
 | `PostgreSqlHealthCheckTests` | `Func<IDbConnection>` | `SELECT 1`; also asserts both the command and the connection are disposed on the failure paths |
