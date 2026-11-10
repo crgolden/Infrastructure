@@ -65,10 +65,6 @@ if ($Only) {
     Write-Host "PROBE: PASSED for the one test named, against the last build's binaries; no verdict was saved"
     exit 0
 }
-if (-not (Get-Command Exit-GateRun -ErrorAction SilentlyContinue)) {
-    Write-Host 'GATE: FAILED (the gate library defines no Exit-GateRun, so it predates the Invoke-Gate this gate runs its body in; pull Tools first)'
-    exit 1
-}
 exit (Invoke-Gate {
 Initialize-GateState 'Infrastructure' $repo
 Resolve-OwedSteps
@@ -76,7 +72,7 @@ Invoke-CatalogSteps
 
 $global:LASTEXITCODE = $null
 dotnet tool restore
-$null = Test-Exit 'Restore local tools (dotnet tool restore)'
+Assert-StepExit 'Restore local tools (dotnet tool restore)'
 
 $sonarCarried = Test-StepCarried $sonarIssues
 if ($sonarCarried) {
@@ -89,11 +85,11 @@ else {
     $env:JAVA_HOME = Get-SonarScannerJavaHome $beginSonar
     $global:LASTEXITCODE = $null
     dotnet-sonarscanner begin /k:"crgolden_Infrastructure" /o:"crgolden" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.cs.opencover.reportsPaths="coverage.opencover.xml" /d:sonar.exclusions="**/bin/**,**/obj/**" /d:sonar.coverage.exclusions="**/Program.cs,**/gate.ps1" /d:sonar.qualitygate.wait=true /d:sonar.scanner.skipJreProvisioning=true /d:sonar.branch.name="$sonarBranch"
-    $null = Test-Exit $beginSonar
+    Assert-StepExit $beginSonar
 
     $global:LASTEXITCODE = $null
     dotnet build --no-incremental --configuration Release /p:RestoreLockedMode=true -warnaserror
-    $null = Test-Exit $build
+    Assert-StepExit $build
 }
 
 if (-not (Test-StepCarried 'jb inspectcode')) {
@@ -117,7 +113,7 @@ if (-not (Test-StepCarried $unit)) {
 if (-not $sonarCarried) {
     $global:LASTEXITCODE = $null
     dotnet-sonarscanner end
-    $null = Test-Exit $endSonar
+    Assert-StepExit $endSonar
     Test-SonarIssues $sonarIssues 'crgolden_Infrastructure' $sonarBranch $sonarStartedAt
 }
 
