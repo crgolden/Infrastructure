@@ -58,7 +58,7 @@ Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30).
 
 | Tool | Notes |
 |---|---|
-| .NET 10 SDK | `global.json` pins `10.0.201` and rolls forward to the latest feature band |
+| .NET 11 SDK | `global.json` pins `11.0.100` and rolls forward to the latest feature band |
 | GitHub personal access token | `read:packages` scope: the `Shared` package restores from the `crgolden` GitHub Packages feed (`NuGet.Config`), which asks for a token even for a public package. Store it as the `GitHub` source's credentials in your user NuGet configuration (`dotnet nuget update source GitHub --username <user> --password <token> --store-password-in-clear-text --configfile "$env:APPDATA\NuGet\NuGet.Config"`), never in this repo |
 | An OIDC provider | The dashboard signs in with OpenID Connect (`OidcAuthority`, `InfrastructureClientId`, `InfrastructureClientSecret`) |
 | Azure Key Vault | Backs the secrets listed below in production, as Key Vault-referenced App Service settings the platform resolves into configuration at startup — non-production reads the same config keys from User Secrets / environment variables |

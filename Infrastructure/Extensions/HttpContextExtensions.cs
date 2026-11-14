@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http.Features;
 
 public static class HttpContextExtensions
 {
+    private static readonly string HttpsPrefix = Uri.UriSchemeHttps + Uri.SchemeDelimiter;
+
     extension(HttpContext httpContext)
     {
         public Uri? ListeningAddressUri(PathString path)
@@ -17,6 +19,4 @@ public static class HttpContextExtensions
             return IsNullOrWhiteSpace(address) ? null : new Uri(address.TrimEnd('/') + path);
         }
     }
-
-    private static readonly string HttpsPrefix = Uri.UriSchemeHttps + Uri.SchemeDelimiter;
 }

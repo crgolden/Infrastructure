@@ -30,7 +30,7 @@ jobs:
         if: github.actor == 'dependabot[bot]'
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.x'
+          dotnet-version: '11.x'
 
       - name: Regenerate lock files and push
         if: github.actor == 'dependabot[bot]'
@@ -103,7 +103,7 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.x'
+          dotnet-version: '11.x'
 
       - name: Cache dotnet global tools
         id: cache-dotnet-tools
@@ -155,9 +155,9 @@ jobs:
       - name: Run unit tests with coverage
         run: |
           $arguments = @(
-            'Infrastructure.Tests.Unit/bin/Release/net10.0'
+            'Infrastructure.Tests.Unit/bin/Release/net11.0'
             '--target', 'dotnet'
-            '--targetargs', 'test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net10.0/TestResults'
+            '--targetargs', 'test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net11.0/TestResults'
             '--format', 'opencover', '--output', 'coverage.opencover.xml'
             '--skipautoprops'
             '--exclude-by-attribute', 'GeneratedCodeAttribute'
@@ -174,7 +174,7 @@ jobs:
         with:
           name: test-results
           if-no-files-found: error
-          path: Infrastructure.Tests.Unit/bin/Release/net10.0/TestResults/
+          path: Infrastructure.Tests.Unit/bin/Release/net11.0/TestResults/
 
       - name: dotnet publish
         env:
@@ -238,11 +238,17 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_7FD723BC59654C5D9241D8312B7D2989 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_28DBB8BC6CAB4B15B7966D75643B607A }}
 
+      - name: Run the app on .NET 11
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+        run: az webapp config set --resource-group $env:AZURE_RESOURCE_GROUP --name $env:AZURE_WEBAPP_NAME --net-framework-version v11.0 --output none
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@02a81bead70021f5284939794bcec79c271ab383  # v3.0.8
         with:
-          app-name: 'crgolden-infrastructure'
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           slot-name: 'Production'
           package: .
          

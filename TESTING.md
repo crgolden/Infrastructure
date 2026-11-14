@@ -52,7 +52,7 @@ dotnet test --project Infrastructure.Tests.Unit --configuration Debug -- --filte
 
 # or the compiled runner, when you want -showLiveOutput:
 dotnet build Infrastructure.Tests.Unit --configuration Debug
-.\Infrastructure.Tests.Unit\bin\Debug\net10.0\Infrastructure.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
+.\Infrastructure.Tests.Unit\bin\Debug\net11.0\Infrastructure.Tests.Unit.exe -trait "Category=Unit" -showLiveOutput
 ```
 
 ---
@@ -113,7 +113,7 @@ One test class per health check. Each check accepts its external dependency via 
 |-------|---------------|
 | `AlertServiceTests` | `AlertService` — publishes alert/recovery `ServiceBusMessage`s to the `email` queue via mocked `IAzureClientFactory<ServiceBusClient>` / `ServiceBusSender` |
 | `HealthMonitorServiceTests` | `HealthMonitorService` — background poll loop: snapshot storage, SignalR broadcast, alert triggering; resilience: poll continues when `CheckHealthAsync` throws, SignalR throw does not block alerting, alert throw does not corrupt transition state |
-| `KeepaliveServiceTests` | `KeepaliveService` — no HTTP call when `WEBSITE_HOSTNAME` is unset; self-pings `/ping` when it is set; a failing ping leaves the loop unfaulted. Each timed case waits for `TimerSignalingTimeProvider` to report the delay timer before advancing the clock, and for the stub's first request before stopping, because a .NET 10 `StartAsync` returns before `ExecuteAsync` has run |
+| `KeepaliveServiceTests` | `KeepaliveService`: no HTTP call when `WEBSITE_HOSTNAME` is unset; self-pings `/ping` when it is set; a failing ping leaves the loop unfaulted. Each timed case waits for `TimerSignalingTimeProvider` to report the delay timer before advancing the clock, and for the stub's first request before stopping, because from .NET 10 on, `StartAsync` returns before `ExecuteAsync` has run |
 
 ### `Controllers/`
 
@@ -157,7 +157,7 @@ dotnet-sonarscanner begin /k:"crgolden_Infrastructure" /o:"crgolden" /d:sonar.to
   /d:sonar.coverage.exclusions="**/Program.cs,**/gate.ps1" `
   /d:sonar.qualitygate.wait=true /d:sonar.scanner.skipJreProvisioning=true
 dotnet build --no-incremental --configuration Release
-dotnet coverlet Infrastructure.Tests.Unit\bin\Release\net10.0 `
+dotnet coverlet Infrastructure.Tests.Unit\bin\Release\net11.0 `
   --target "dotnet" `
   --targetargs "test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit" `
   --format opencover --output "coverage.opencover.xml" `
