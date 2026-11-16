@@ -20,7 +20,7 @@ public sealed class SqlServerHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -36,7 +36,7 @@ public sealed class SqlServerHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -46,18 +46,11 @@ public sealed class SqlServerHealthCheckTests
     public async Task CheckHealthAsync_WhenQuerySucceeds_ReturnsHealthy()
     {
         // Arrange
-        var mockCmd = new Mock<IDbCommand>();
-        mockCmd.SetupSet(c => c.CommandText = It.IsAny<string>());
-        mockCmd.Setup(c => c.ExecuteScalar()).Returns(1);
-        var mockConn = new Mock<IDbConnection>();
-        mockConn.Setup(c => c.Open());
-        mockConn.Setup(c => c.CreateCommand()).Returns(mockCmd.Object);
-        Func<IDbConnection> factory = () => mockConn.Object;
-        var check = new SqlServerHealthCheck(factory);
+        var check = new SqlServerHealthCheck(BuildHealthyConnection);
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -78,7 +71,7 @@ public sealed class SqlServerHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.SqlServer);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -99,12 +92,14 @@ public sealed class SqlServerHealthCheckTests
 
     private static IDbConnection BuildHealthyConnection()
     {
-        var mockCmd = new Mock<IDbCommand>();
-        mockCmd.SetupSet(c => c.CommandText = It.IsAny<string>());
+        var mockCmd = new Mock<IDbCommand>(MockBehavior.Strict);
+        mockCmd.SetupSet(c => c.CommandText = RelationalHealthCheck.ProbeCommandText);
         mockCmd.Setup(c => c.ExecuteScalar()).Returns(1);
-        var mockConn = new Mock<IDbConnection>();
+        mockCmd.Setup(c => c.Dispose());
+        var mockConn = new Mock<IDbConnection>(MockBehavior.Strict);
         mockConn.Setup(c => c.Open());
         mockConn.Setup(c => c.CreateCommand()).Returns(mockCmd.Object);
+        mockConn.Setup(c => c.Dispose());
         return mockConn.Object;
     }
 }

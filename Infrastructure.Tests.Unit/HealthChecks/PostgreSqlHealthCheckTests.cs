@@ -19,7 +19,7 @@ public sealed class PostgreSqlHealthCheckTests
         var check = new PostgreSqlHealthCheck(factory);
 
         // Act
-        var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+        var result = await check.CheckHealthAsync(CreateContext(check), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -38,7 +38,7 @@ public sealed class PostgreSqlHealthCheckTests
         var check = new PostgreSqlHealthCheck(() => mockConnection.Object);
 
         // Act
-        var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+        var result = await check.CheckHealthAsync(CreateContext(check), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -63,7 +63,7 @@ public sealed class PostgreSqlHealthCheckTests
         var check = new PostgreSqlHealthCheck(() => mockConnection.Object);
 
         // Act
-        var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+        var result = await check.CheckHealthAsync(CreateContext(check), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -85,7 +85,7 @@ public sealed class PostgreSqlHealthCheckTests
         var check = new PostgreSqlHealthCheck(() => remainingAttempts.Dequeue()());
 
         // Act
-        var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+        var result = await check.CheckHealthAsync(CreateContext(check), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -108,7 +108,7 @@ public sealed class PostgreSqlHealthCheckTests
         var check = new PostgreSqlHealthCheck(() => mockConnection.Object);
 
         // Act
-        var result = await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+        var result = await check.CheckHealthAsync(CreateContext(check), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -131,7 +131,7 @@ public sealed class PostgreSqlHealthCheckTests
         var check = new PostgreSqlHealthCheck(() => mockConnection.Object);
 
         // Act
-        await check.CheckHealthAsync(CreateContext(check), CancellationToken.None);
+        await check.CheckHealthAsync(CreateContext(check), TestContext.Current.CancellationToken);
 
         // Assert
         mockConnection.Verify(c => c.Open(), Times.Once);

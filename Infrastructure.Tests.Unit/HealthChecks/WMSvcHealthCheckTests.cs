@@ -21,7 +21,7 @@ public sealed class WMSvcHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.WmSvc);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -37,7 +37,7 @@ public sealed class WMSvcHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.WmSvc);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -84,7 +84,7 @@ public sealed class WMSvcHealthCheckTests
             var context = HealthCheckContexts.Create(check, HealthCheckNames.WmSvc);
 
             // Act
-            var result = await check.CheckHealthAsync(context, CancellationToken.None);
+            var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.Equal(HealthStatus.Healthy, result.Status);

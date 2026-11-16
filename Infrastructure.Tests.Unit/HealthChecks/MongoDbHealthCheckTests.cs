@@ -28,7 +28,7 @@ public sealed class MongoDbHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Healthy, result.Status);
@@ -57,7 +57,7 @@ public sealed class MongoDbHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
@@ -75,7 +75,7 @@ public sealed class MongoDbHealthCheckTests
         var context = HealthCheckContexts.Create(check, HealthCheckNames.MongoDb);
 
         // Act
-        var result = await check.CheckHealthAsync(context, CancellationToken.None);
+        var result = await check.CheckHealthAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
