@@ -12,18 +12,16 @@ $gateOutput = if (Get-Command Get-GateOutputDirectory -ErrorAction SilentlyConti
 } else {
     (New-Item -ItemType Directory -Force -Path (Join-Path ([IO.Path]::GetTempPath()) "claude\crgolden-gates\$(Split-Path -Leaf $PSScriptRoot)")).FullName
 }
-Register-GateSteps @('Restore local tools', 'Begin Sonar analysis', 'Build with dotnet', 'jb inspectcode',
+Register-GateStep @('Restore local tools', 'Begin Sonar analysis', 'Build with dotnet', 'jb inspectcode',
     'Run unit tests with coverage', 'End Sonar analysis',
     'Fail on open Sonar issues')
-Register-StepInputs @{
-    'Restore local tools'          = @('dotnet-tools.json')
-    'Begin Sonar analysis'         = @('*')
-    'Build with dotnet'            = @('*')
-    'jb inspectcode'               = @('*')
-    'Run unit tests with coverage' = @('*')
-    'End Sonar analysis'           = @('*')
-    'Fail on open Sonar issues'    = @('*')
-}
+Register-StepInput 'Restore local tools' @('dotnet-tools.json')
+Register-StepInput 'Begin Sonar analysis' @('*')
+Register-StepInput 'Build with dotnet' @('*')
+Register-StepInput 'jb inspectcode' @('*')
+Register-StepInput 'Run unit tests with coverage' @('*')
+Register-StepInput 'End Sonar analysis' @('*')
+Register-StepInput 'Fail on open Sonar issues' @('*')
 $repo = $PSScriptRoot
 $sarif = (Join-Path $gateOutput 'infrastructure-inspect.sarif')
 $unitTrx = Join-Path $repo 'Infrastructure.Tests.Unit\bin\Release\net11.0\TestResults\unit-tests.trx'
@@ -67,8 +65,8 @@ if ($Only) {
 }
 exit (Invoke-Gate {
 Initialize-GateState 'Infrastructure' $repo
-Resolve-OwedSteps
-Invoke-CatalogSteps
+Get-OwedStep | Register-OwedStep
+Invoke-GateLibraryStep
 
 $global:LASTEXITCODE = $null
 dotnet tool restore
@@ -94,7 +92,7 @@ else {
 
 if (-not (Test-StepCarried 'jb inspectcode')) {
     if (Test-Path $sarif) { Remove-Item $sarif -Force }
-    dotnet jb inspectcode "$repo\Infrastructure.slnx" --no-build -e=WARNING --caches-home="$(New-InspectCodeCaches $gateOutput)" --output="$sarif"
+    dotnet jb inspectcode "$repo\Infrastructure.slnx" --no-build -e=WARNING --caches-home="$(New-InspectCodeCache $gateOutput)" --output="$sarif"
     Test-Sarif $sarif
 }
 
@@ -114,7 +112,7 @@ if (-not $sonarCarried) {
     $global:LASTEXITCODE = $null
     dotnet-sonarscanner end
     Assert-StepExit $endSonar
-    Test-SonarIssues $sonarIssues 'crgolden_Infrastructure' $sonarBranch $sonarStartedAt
+    Assert-NoOpenSonarIssue $sonarIssues 'crgolden_Infrastructure' $sonarBranch $sonarStartedAt
 }
 
 Write-Row 'Upload test results / dotnet publish / Upload artifact / deploy' 'NOT RUN' 'delivery steps, not checks'

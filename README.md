@@ -6,7 +6,7 @@
 
 An ASP.NET Core 10 service-health monitoring application that continuously polls critical infrastructure services, displays a real-time dashboard, and emails alerts on status changes.
 
-How the parts fit together and the rules each keeps: [ARCHITECTURE.md](ARCHITECTURE.md). The dashboard's design: [DESIGN.md](DESIGN.md). How to run the tests: [TESTING.md](TESTING.md). Guidance for coding agents working in this repo: [AGENTS.md](AGENTS.md).
+How the parts fit together and the rules each keeps: [ARCHITECTURE.md](ARCHITECTURE.md). The dashboard's design: [DESIGN.md](DESIGN.md). How to run the tests: [TESTING.md](TESTING.md).
 
 ## Services Monitored
 

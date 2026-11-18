@@ -19,7 +19,6 @@ sends no email itself: alerts go to an Azure Service Bus queue that a separate w
 | `Infrastructure/Pages` | the dashboard and the sign-out action ([DESIGN.md](DESIGN.md)) |
 | `Infrastructure/Models`, `Extensions`, `Telemetry.cs` | options and snapshot types, `GetRequired<T>`, the failure counter |
 | `Infrastructure.Tests.Unit` | the unit tier ([TESTING.md](TESTING.md)) |
-| `AGENTS.md` | the invariants and the steps for adding a monitored service, written for coding agents |
 | `.github/workflows/main_crgolden-infrastructure.yml` | build, inspect, test, analyze and deploy |
 | `NuGet.Config`, `packages.lock.json` files, `dotnet-tools.json`, `global.json` | package sources (the `Shared` package from GitHub Packages), locked restore, pinned tools, the SDK |
 | `gate.ps1` | the maintainers' local gate (README.md, "Gate") |
