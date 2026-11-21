@@ -247,7 +247,48 @@ public sealed class HealthMonitorServiceTests : IDisposable
             healthCheckService.Object,
             hubContext.Object,
             alertService.Object,
-            Options.Create(new MonitoringOptions { IntervalSeconds = null }),
+            Options.Create(new MonitoringOptions { IntervalSeconds = null, AlertAfterConsecutiveFailures = 1 }),
+            _harness.Telemetry));
+
+        // Assert
+        Assert.IsType<InvalidOperationException>(exception);
+    }
+
+    [Fact]
+    public void Constructor_WhenAlertAfterConsecutiveFailuresIsNull_ThrowsNamingTheSetting()
+    {
+        // Arrange
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+
+        // Act
+        var exception = Record.Exception(() => new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            Options.Create(new MonitoringOptions { IntervalSeconds = 1, AlertAfterConsecutiveFailures = null }),
+            _harness.Telemetry));
+
+        // Assert
+        var invalid = Assert.IsType<InvalidOperationException>(exception);
+        Assert.Contains(nameof(MonitoringOptions.AlertAfterConsecutiveFailures), invalid.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Constructor_WhenAlertAfterConsecutiveFailuresIsZero_Throws()
+    {
+        // Arrange
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+
+        // Act
+        var exception = Record.Exception(() => new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            Options.Create(new MonitoringOptions { IntervalSeconds = 1, AlertAfterConsecutiveFailures = 0 }),
             _harness.Telemetry));
 
         // Assert
@@ -482,7 +523,7 @@ public sealed class HealthMonitorServiceTests : IDisposable
     public void Dispose() => _harness.Dispose();
 
     private static IOptions<MonitoringOptions> GetDefaultOptions() =>
-        Options.Create(new MonitoringOptions { IntervalSeconds = 1 });
+        Options.Create(new MonitoringOptions { IntervalSeconds = 1, AlertAfterConsecutiveFailures = 1 });
 
     private static HealthReport BuildReport(HealthStatus status, string? name = null)
     {

@@ -11,13 +11,14 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 {
     internal const string SnapshotClientMethod = "ReceiveSnapshot";
 
-    private readonly Dictionary<string, ServiceStatus> _previousStatuses = [];
+    private readonly Dictionary<string, AlertTracking> _alertTracking = [];
     private readonly Lock _lock = new();
     private readonly HealthCheckService _healthCheckService;
     private readonly IHubContext<HealthHub> _hubContext;
     private readonly IAlertService _alertService;
     private readonly Telemetry _telemetry;
     private readonly int _intervalSeconds;
+    private readonly int _alertAfterConsecutiveFailures;
 
     private HealthSnapshot? _lastSnapshot;
 
@@ -38,6 +39,12 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
 
         _intervalSeconds = options.Value.IntervalSeconds.Value;
+        if (options.Value.AlertAfterConsecutiveFailures is not > 0)
+        {
+            throw new InvalidOperationException($"Invalid '{nameof(MonitoringOptions.AlertAfterConsecutiveFailures)}'.");
+        }
+
+        _alertAfterConsecutiveFailures = options.Value.AlertAfterConsecutiveFailures.Value;
     }
 
     public HealthSnapshot? LastSnapshot
@@ -117,17 +124,17 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
 
         foreach (var result in results)
         {
-            _previousStatuses.TryGetValue(result.Name, out var previous);
-            var current = result.Status;
+            _alertTracking.TryGetValue(result.Name, out var previous);
+            var decision = AlertTransitions.Decide(previous, result.Status, _alertAfterConsecutiveFailures);
 
             try
             {
-                switch (previous)
+                switch (decision.Action)
                 {
-                    case ServiceStatus.Unknown or ServiceStatus.Healthy when current is ServiceStatus.Unhealthy:
+                    case AlertAction.SendAlert:
                         await _alertService.SendAlertAsync(result, cancellationToken);
                         break;
-                    case ServiceStatus.Unhealthy when current is ServiceStatus.Healthy:
+                    case AlertAction.SendRecovery:
                         await _alertService.SendRecoveryAsync(result, cancellationToken);
                         break;
                 }
@@ -141,7 +148,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
                 _telemetry.HealthMonitorFailed(Telemetry.Metrics.AlertSendStage, ex);
             }
 
-            _previousStatuses[result.Name] = current;
+            _alertTracking[result.Name] = decision.Tracking;
         }
     }
 }
