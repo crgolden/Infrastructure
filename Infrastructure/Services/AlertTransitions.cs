@@ -15,12 +15,16 @@ internal readonly record struct AlertDecision(AlertTracking Tracking, AlertActio
 
 internal static class AlertTransitions
 {
-    public static AlertDecision Decide(AlertTracking previous, ServiceStatus current, int alertAfterConsecutiveFailures)
+    public static AlertDecision Decide(
+        AlertTracking previous,
+        ServiceStatus current,
+        int alertAfterConsecutiveFailures,
+        bool inMaintenance)
     {
         if (current is ServiceStatus.Unhealthy)
         {
             var count = previous.ConsecutiveUnhealthy + 1;
-            var crossed = !previous.Alerted && count >= alertAfterConsecutiveFailures;
+            var crossed = !inMaintenance && !previous.Alerted && count >= alertAfterConsecutiveFailures;
             return new AlertDecision(
                 new AlertTracking(count, previous.Alerted || crossed),
                 crossed ? AlertAction.SendAlert : AlertAction.None);

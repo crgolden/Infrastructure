@@ -19,6 +19,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
     private readonly Telemetry _telemetry;
     private readonly int _intervalSeconds;
     private readonly int _alertAfterConsecutiveFailures;
+    private readonly DateTimeOffset? _maintenanceUntil;
 
     private HealthSnapshot? _lastSnapshot;
 
@@ -45,6 +46,7 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
         }
 
         _alertAfterConsecutiveFailures = options.Value.AlertAfterConsecutiveFailures.Value;
+        _maintenanceUntil = options.Value.MaintenanceUntil;
     }
 
     public HealthSnapshot? LastSnapshot
@@ -122,10 +124,11 @@ public sealed class HealthMonitorService : BackgroundService, IHealthMonitorServ
             _telemetry.HealthMonitorFailed(Telemetry.Metrics.SnapshotPushStage, ex);
         }
 
+        var inMaintenance = _maintenanceUntil is { } until && now < until;
         foreach (var result in results)
         {
             _alertTracking.TryGetValue(result.Name, out var previous);
-            var decision = AlertTransitions.Decide(previous, result.Status, _alertAfterConsecutiveFailures);
+            var decision = AlertTransitions.Decide(previous, result.Status, _alertAfterConsecutiveFailures, inMaintenance);
 
             try
             {

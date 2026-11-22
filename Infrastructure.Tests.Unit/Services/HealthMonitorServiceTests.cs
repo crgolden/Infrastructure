@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Threading.Channels;
 
 [Trait("Category", "Unit")]
 public sealed class HealthMonitorServiceTests : IDisposable
@@ -94,6 +95,54 @@ public sealed class HealthMonitorServiceTests : IDisposable
                 It.Is<ServiceHealthResult>(r => r.Status == ServiceStatus.Unhealthy),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SendsNoAlertWhileAMaintenanceWindowIsOpen()
+    {
+        // Arrange
+        var healthCheckService = new Mock<HealthCheckService>(MockBehavior.Strict);
+        healthCheckService.Setup(h => h.CheckHealthAsync(It.IsAny<Func<HealthCheckRegistration, bool>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildReport(HealthStatus.Unhealthy));
+
+        var hubContext = new Mock<IHubContext<HealthHub>>(MockBehavior.Strict);
+        var clients = new Mock<IHubClients>(MockBehavior.Strict);
+        var clientProxy = new Mock<IClientProxy>(MockBehavior.Strict);
+        hubContext.Setup(h => h.Clients).Returns(clients.Object);
+        clients.Setup(c => c.All).Returns(clientProxy.Object);
+        var snapshotPushed = Channel.CreateUnbounded<HealthSnapshot>();
+        clientProxy.Setup(c => c.SendCoreAsync(It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+            .Callback<string, object[], CancellationToken>((_, arguments, _) => snapshotPushed.Writer.TryWrite((HealthSnapshot)arguments[0]))
+            .Returns(Task.CompletedTask);
+
+        var alertService = new Mock<IAlertService>(MockBehavior.Strict);
+        var windowDays = Random.Shared.Next(1, 30);
+        var maintenanceUntil = DateTimeOffset.UtcNow.AddDays(windowDays);
+        var options = Options.Create(new MonitoringOptions
+        {
+            IntervalSeconds = 1,
+            AlertAfterConsecutiveFailures = 1,
+            MaintenanceUntil = maintenanceUntil,
+        });
+
+        var svc = new HealthMonitorService(
+            healthCheckService.Object,
+            hubContext.Object,
+            alertService.Object,
+            options,
+            _harness.Telemetry);
+
+        // Act
+        using var cts = new CancellationTokenSource();
+        _ = svc.StartAsync(cts.Token);
+        await snapshotPushed.Reader.ReadAsync(TestContext.Current.CancellationToken);
+        await snapshotPushed.Reader.ReadAsync(TestContext.Current.CancellationToken);
+        await cts.CancelAsync();
+
+        // Assert
+        alertService.Verify(
+            a => a.SendAlertAsync(It.IsAny<ServiceHealthResult>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

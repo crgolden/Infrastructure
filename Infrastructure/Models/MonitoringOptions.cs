@@ -5,4 +5,6 @@ public sealed class MonitoringOptions
     public int? IntervalSeconds { get; set; }
 
     public int? AlertAfterConsecutiveFailures { get; set; }
+
+    public DateTimeOffset? MaintenanceUntil { get; set; }
 }

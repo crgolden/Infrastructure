@@ -40,7 +40,7 @@ Every check is registered in `Program.cs` and runs each poll cycle. HTTP checks 
 
 The last eight are web apps; each check extends `SiblingAppHealthCheck`, which reads the app's base URL from the listed key and reports healthy only when the `/health` body is exactly `Healthy`. Point any key at the app you want to watch.
 
-Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30). When a service has been `Unhealthy` for `MonitoringOptions:AlertAfterConsecutiveFailures` consecutive polls (default 4, two minutes), an alert message is published to the Azure Service Bus `email` queue; a recovery message is sent when it returns to `Healthy`, and only if an alert was sent. A blip shorter than the threshold sends nothing. `Degraded` does not trigger an email and resets the count.
+Health checks are polled every `MonitoringOptions:IntervalSeconds` (default 30). When a service has been `Unhealthy` for `MonitoringOptions:AlertAfterConsecutiveFailures` consecutive polls (default 4, two minutes), an alert message is published to the Azure Service Bus `email` queue; a recovery message is sent when it returns to `Healthy`, and only if an alert was sent. A blip shorter than the threshold sends nothing. `Degraded` does not trigger an email and resets the count. While `MonitoringOptions:MaintenanceUntil` is in the future, a service crossing the threshold sends no alert; one still `Unhealthy` once that time has passed alerts on its next poll.
 
 ## Technologies
 
@@ -84,6 +84,7 @@ All `null` values in `appsettings.json` must be supplied via **User Secrets** (d
 | `OidcAuthority` | Identity OIDC authority — also the Identity `/health` target |
 | `MonitoringOptions:IntervalSeconds` | Poll interval in seconds (default 30) |
 | `MonitoringOptions:AlertAfterConsecutiveFailures` | Consecutive `Unhealthy` polls before an alert email (default 4); required, at least 1 |
+| `MonitoringOptions:MaintenanceUntil` | End of a planned-maintenance window (ISO 8601 with offset); alert email is held until then. Unset holds nothing |
 | `TelemetryOptions:HealthMonitorFailureDescription` | Description of the `infrastructure.health_monitor.failures` counter |
 | `ServiceEndpointOptions:IisHttps` | URL for IIS HTTPS check |
 | `ServiceEndpointOptions:Elasticsearch` | URL for Elasticsearch health check |
