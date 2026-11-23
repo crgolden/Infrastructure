@@ -12,6 +12,7 @@ using Elastic.Transport;
 using Infrastructure.Extensions;
 using Infrastructure.HealthChecks;
 using Infrastructure.Hubs;
+using Infrastructure.Logging;
 using Infrastructure.Models;
 using Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -267,6 +268,7 @@ try
     var app = builder.Build();
     app.UseSerilogRequestLogging(options =>
     {
+        options.GetLevel = RequestLogLevel.Of;
         options.EnrichDiagnosticContext = (diagnosticContext, _) =>
         {
             if (Activity.Current is null)

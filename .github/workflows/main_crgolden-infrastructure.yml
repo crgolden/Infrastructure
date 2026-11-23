@@ -158,7 +158,7 @@ jobs:
           $arguments = @(
             'Infrastructure.Tests.Unit/bin/Release/net11.0'
             '--target', 'dotnet'
-            '--targetargs', 'test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --stop-on-fail on --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net11.0/TestResults'
+            '--targetargs', 'test --project Infrastructure.Tests.Unit --no-build --configuration Release -- --filter-trait Category=Unit --report-xunit-trx --report-xunit-trx-filename unit-tests.trx --results-directory=Infrastructure.Tests.Unit/bin/Release/net11.0/TestResults'
             '--format', 'opencover', '--output', 'coverage.opencover.xml'
             '--skipautoprops'
             '--exclude-by-attribute', 'GeneratedCodeAttribute'
