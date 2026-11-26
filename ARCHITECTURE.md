@@ -21,7 +21,7 @@ sends no email itself: alerts go to an Azure Service Bus queue that a separate w
 | `Infrastructure.Tests.Unit` | the unit tier ([TESTING.md](TESTING.md)) |
 | `.github/workflows/main_crgolden-infrastructure.yml` | build, inspect, test, analyze and deploy |
 | `NuGet.Config`, `packages.lock.json` files, `dotnet-tools.json`, `global.json` | package sources (the `Shared` package from GitHub Packages), locked restore, pinned tools, the SDK |
-| `gate.ps1` | the maintainers' local gate (README.md, "Gate") |
+| `gate.ps1`, `gate.steps.psd1` | the maintainers' local gate: its entry point and its step list (README.md, "Gate") |
 
 ## Invariants
 
