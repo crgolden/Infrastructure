@@ -511,8 +511,8 @@
       },
       "Npgsql": {
         "type": "Transitive",
-        "resolved": "10.0.4",
-        "contentHash": "m2VCpcU9MKD8lLxTn+YaNIRWd+Gz3y/9wIaM+2ifDF24xZ2Kvvjx4CDB2BIgobr1Gj6a/gsdmfz1sQ+kmd7liw=="
+        "resolved": "11.0.0",
+        "contentHash": "ozQ8GJcEAiW6XSKz2RUpdJDvM4l380BdHx/MRB7QJHL2cTH/0js7f/cisCaYMrZvVUj4/HIW80UjXxI+ikQQzQ=="
       },
       "OpenTelemetry": {
         "type": "Transitive",
@@ -842,7 +842,7 @@
           "Microsoft.Data.SqlClient": "[7.1.2, )",
           "Microsoft.Extensions.Azure": "[1.14.1, )",
           "MongoDB.Driver": "[3.14.1, )",
-          "Npgsql": "[10.0.4, )",
+          "Npgsql": "[11.0.0, )",
           "OpenTelemetry.Exporter.Console": "[1.21.0, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.21.0, )",
           "OpenTelemetry.Extensions.Hosting": "[1.21.0, )",
